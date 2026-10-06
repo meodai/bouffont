@@ -39,11 +39,11 @@ const getFont = async (name) => (loaded[name] ??= await loadFont(fonts[name].url
 // ── State ────────────────────────────────────────────────────────────────────────
 // What the code panel shows: the preset's full recipe (editable, on top) and the
 // options passed to graffiti(): text, seed, the spread recipe and your changes.
-// Defaults match the page titles: Merriweather, throwup, letters repelling.
+// Defaults match the page titles: Merriweather, throwup.
 let fontName = fonts.Merriweather ? 'Merriweather' : Object.keys(fonts)[0];
 let presetName = Object.keys(presets)[0];
 let recipe = structuredClone(presets[presetName]);
-let overrides = { text: 'bouffont', seed: 'puff', repel: true };
+let overrides = { text: 'salle petit\nbouffont', seed: 'puff' };
 const NESTED = ['render', 'structure'];
 
 // Library defaults for options a recipe may leave out.
@@ -272,7 +272,7 @@ $('shuffle').addEventListener('click', () => {
 });
 // Reset: the preset's own recipe and the default settings (text and seed stay).
 $('reset').addEventListener('click', () => {
-  overrides = { text: overrides.text, seed: overrides.seed, repel: true };
+  overrides = { text: overrides.text, seed: overrides.seed };
   fromControl('preset');
 });
 $('copy').addEventListener('click', async () => {

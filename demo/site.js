@@ -30,7 +30,7 @@ const piece = async (opts) => graffiti({ font: await font(iosevkaUrl), seed: 'pu
 // ── Titles ─────────────────────────────────────────────────────────────────────
 // Every title is grown with the settings panel's options (main.js broadcasts them),
 // each with its own text. Redrawn shortly after the settings stop changing.
-const TITLE_DEFAULTS = { preset: 'throwup', repel: true, seed: 'puff' };
+const TITLE_DEFAULTS = { preset: 'throwup', seed: 'puff' };
 let titleOptions = TITLE_DEFAULTS, titleFont = merriweatherUrl, titleRun = 0, titleTimer;
 
 async function titles() {
