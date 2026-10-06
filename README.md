@@ -236,3 +236,7 @@ and `data-char` on each letter group.
 Colour, fills, backgrounds, 3D, splitting, and letters built from a centre line
 (tags and simples drawn as strokes). The pipeline works on plain polygons, so a
 centre-line layout can feed in later.
+
+## License
+
+MIT © David Aerne

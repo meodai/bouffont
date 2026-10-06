@@ -19,7 +19,7 @@
     "typography",
     "bubble-letters"
   ],
-  "author": "",
+  "author": "David Aerne",
   "license": "MIT",
   "type": "module",
   "dependencies": {
