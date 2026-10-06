@@ -47,7 +47,7 @@ let overrides = { text: 'salle petit\nbouffont', seed: 'puff' };
 const NESTED = ['render', 'structure'];
 
 // Library defaults for options a recipe may leave out.
-const DEFAULTS = { align: 'middle', lineHeight: 1, overgrow: 0, repel: false, knit: 0, smooth: 0, tracking: 0 };
+const DEFAULTS = { align: 'middle', lineHeight: 1, overgrow: 0, density: 0, repel: false, knit: 0, smooth: 0, tracking: 0 };
 const RENDER_DEFAULTS = { order: 'ltr', curves: 0, fair: 0 };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const asObj = (v) => (v && typeof v === 'object' ? v : {});
@@ -150,6 +150,7 @@ const sliders = {
   lineHeight: { get: () => value('lineHeight'), set: (v) => set('lineHeight', v), fmt: 2 },
   tracking: { get: () => value('tracking'), set: (v) => set('tracking', v), fmt: 2 },
   overgrow: { get: () => value('overgrow'), set: (v) => set('overgrow', v), fmt: 2 },
+  density: { get: () => value('density'), set: (v) => set('density', v), fmt: 2 },
   follow: { get: follow, set: setFollow, fmt: 1 },
   smooth: { get: () => (typeof value('smooth') === 'object' ? value('smooth').amount : value('smooth')), set: (v) => set('smooth', v), fmt: 2 },
   curves: { get: () => renderValue('curves'), set: (v) => setRender('curves', v), fmt: 2, off: 'off' },

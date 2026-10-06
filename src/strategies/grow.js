@@ -11,7 +11,7 @@ export function grow(letters, ctx, {
   let current = letters;
   for (let i = 0; i < steps; i++) {
     const next = current.map((l, k) =>
-      ctx.targets?.[k] === false ? l : { ...l, shape: offset(l.shape, delta, { join, miterLimit: 4 }) });
+      ctx.targets?.[k] === false ? l : { ...l, shape: offset(l.shape, delta * (l.growth ?? 1), { join, miterLimit: 4 }) });
     current = constrain(next, current, ctx, { neighbors, gap, clip });
   }
   if (smooth) {

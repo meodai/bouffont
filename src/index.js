@@ -2,6 +2,7 @@ import { createRng } from './rng.js';
 import { layout } from './font.js';
 import { applyEnvelope } from './envelope.js';
 import { applyStructure } from './structure.js';
+import { balanceDensity } from './density.js';
 import { alignBarrier } from './align.js';
 import { runStrategies } from './strategies/index.js';
 import { runDecorations } from './decorations.js';
@@ -63,6 +64,7 @@ function generations(spec, amount) {
  * @param {string} [o.align]     'middle' | 'bottom' | 'top' | 'both': lines growth can't cross
  * @param {Array} [o.strategies] growth strategies, applied in order
  * @param {number} [o.knit]     close gaps between letters narrower than 2× this (stems; off by default)
+ * @param {number} [o.density]  0–1: balance growth by each letter's ink, for an even colour
  * @param {number} [o.overgrow] keep growing after letters meet: more generations of the preset's
  *                               own growth (`generations`), or an outward swell (stems)
  * @param {boolean} [o.repel]  letters repel each other's growth: shared seams instead of overlaps
@@ -105,7 +107,9 @@ export function graffiti(o) {
     ctx.redraw = res.redraw;
   }
 
-  const { letters: warped, polygon, edges } = applyEnvelope(letters0, opts.envelope, ctx);
+  const { letters: shaped, polygon, edges } = applyEnvelope(letters0, opts.envelope, ctx);
+  // Even colour: light letters grow more, heavy ones less (0–1).
+  const warped = balanceDensity(shaped, opts.density ?? 0, ctx);
   ctx.envelope = polygon;
   ctx.details = resolveDetails(opts.details, ctx.stem);
   ctx.barrier = alignBarrier(opts.align, edges, warped, {

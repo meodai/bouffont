@@ -42,7 +42,7 @@ export function pack(letters, ctx, {
     const discs = [];
     for (const st of lines) {
       const { at, total } = walker(st.points, st.closed);
-      const radius = () => size * stem * (1 + ctx.rng.range(-vary, vary));
+      const radius = () => size * stem * (letter.growth ?? 1) * (1 + ctx.rng.range(-vary, vary));
       let r = radius();
       let s = st.closed ? 0 : Math.min(total / 2, r * 0.4);
       const end = st.closed ? total - r : total - Math.min(total / 2, r * 0.4);

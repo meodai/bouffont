@@ -72,6 +72,7 @@ grown from the font outline (`structure: false`).
 | `knit`        | `0`     | closes gaps between letters narrower than 2× this (stems); try `0.25` |
 | `align`       | `'middle'` | `'bottom'` / `'top'` / `'both'`: lines growth can't cross |
 | `strategies`  | `[]`    | applied in order |
+| `density`     | `0`     | 0–1: even typographic colour. Each letter's growth is scaled by its ink (measured on the pen drawing): light letters like i, l, t swell more, heavy ones like m, w less |
 | `overgrow`    | `0`     | keep growing after letters meet. If the preset has `generations`, that many more rounds of its own growth (1 = one full round); otherwise letters swell outward by this many stems, contacts stay |
 | `generations` |         | what keep growing means for a preset: `[type, scaled, fixed]` or a list; numbers in `scaled` are the values at `overgrow: 1` and scale with it, e.g. `['dla', { reach: 1.2, particles: 0.8 }]` |
 | `repel`       | `false` | letters repel each other's growth: contested areas are split fairly into shared seams, no letter slides under another |

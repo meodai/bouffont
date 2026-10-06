@@ -25,22 +25,27 @@ const withFeatures = (letter, res) => ({ ...letter, shape: res.shape, ...(res.in
 // swell more (evens contrast out). Growth is amount × (thickness / stem) ^ follow.
 export function inflate(letters, ctx, { amount = 0.5, smooth = 0.5, keep = 0.12, follow = 0 } = {}) {
   const stem = ctx.stem;
-  const grow = (shape) => {
-    if (!follow) return offset(shape, amount * stem, { join: 'round' });
-    const radius = (t) => Math.min(amount * 3, amount * (t / stem) ** follow) * stem;
+  // `letter.growth` (see density.js) scales each letter's swell.
+  const grow = (shape, a) => {
+    if (!follow) return offset(shape, a * stem, { join: 'round' });
+    const radius = (t) => Math.min(a * 3, a * (t / stem) ** follow) * stem;
     return variableOffset(shape, radius, { spacing: stem / 5, min: stem * 0.15, max: stem * 2.5 });
   };
   return letters.map((letter) => {
-    let s = grow(letter.shape);
+    const a = amount * (letter.growth ?? 1);
+    let s = grow(letter.shape, a);
     if (smooth) s = close(s, smooth * stem, 'round');
-    return withFeatures(letter, keepFeatures(letter.shape, s, ctx, amount + smooth, keep, letter));
+    return withFeatures(letter, keepFeatures(letter.shape, s, ctx, a + smooth, keep, letter));
   });
 }
 
 // Heavy block letters: sharp miter offset.
 export function block(letters, ctx, { amount = 0.35, miterLimit = 4, keep = 0.12 } = {}) {
-  return letters.map((letter) => withFeatures(letter,
-    keepFeatures(letter.shape, offset(letter.shape, amount * ctx.stem, { join: 'miter', miterLimit }), ctx, amount, keep, letter)));
+  return letters.map((letter) => {
+    const a = amount * (letter.growth ?? 1);
+    return withFeatures(letter,
+      keepFeatures(letter.shape, offset(letter.shape, a * ctx.stem, { join: 'miter', miterLimit }), ctx, a, keep, letter));
+  });
 }
 
 // Bevel convex corners (and optionally concave ones with `inner`).

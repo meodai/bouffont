@@ -11,7 +11,7 @@ export function overgrow(letters, ctx, { amount = 0.5, seam = 0.4, keep = 0.25 }
   if (!d) return letters;
   // Each letter's current shape is the seed its share of the new space grows from.
   const swollen = letters.map((l, i) =>
-    ctx.targets?.[i] === false || !l.shape.length ? l : { ...l, core: l.shape, shape: offset(l.shape, d, { join: 'round' }) });
+    ctx.targets?.[i] === false || !l.shape.length ? l : { ...l, core: l.shape, shape: offset(l.shape, d * (l.growth ?? 1), { join: 'round' }) });
   const split = repel(swollen, ctx, { seam });
   return split.map((l, i) => {
     // Counters shrink with the swell but stay open, at least `keep` wide.

@@ -251,6 +251,17 @@ describe('dom parts', () => {
   });
 });
 
+describe('density', () => {
+  it('evens out the ink between light and heavy letters', () => {
+    const spread = (density) => {
+      const { letters } = graffiti({ text: 'lim', font: inter, preset: 'bubbles', seed: 1, density });
+      const a = letters.map((l) => geom.area(l.shape));
+      return Math.min(...a) / Math.max(...a);
+    };
+    expect(spread(1)).toBeGreaterThan(spread(0) + 0.1);
+  });
+});
+
 describe('legibility', () => {
   it('keeps the counter of an O when inflating', () => {
     const ctx = ctxFor();
