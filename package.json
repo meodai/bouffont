@@ -1,0 +1,51 @@
+{
+  "name": "bouffont",
+  "version": "0.0.1",
+  "description": "Generative puffy lettering as SVG",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest run",
+    "gallery": "node scripts/gallery.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "fonts": "sh scripts/subset-fonts.sh"
+  },
+  "keywords": [
+    "svg",
+    "generative",
+    "creative-coding",
+    "lettering",
+    "typography",
+    "bubble-letters"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "clipper-lib": "^6.4.2",
+    "opentype.js": "^2.0.0"
+  },
+  "devDependencies": {
+    "@fontsource/archivo-black": "^5.3.0",
+    "@fontsource/bangers": "^5.3.0",
+    "@fontsource/bricolage-grotesque": "^5.3.0",
+    "@fontsource/grechen-fuemen": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/iosevka": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/merriweather": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "@fontsource/roboto": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "happy-dom": "^20.14.5",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ]
+}
