@@ -27,7 +27,9 @@ a:hover { text-underline-offset: 0.15em; text-decoration-thickness: 0.05em; }
 .page [data-puff] svg { display: block; width: auto; max-width: 100%; overflow: visible; }
 .page h1[data-puff] svg { height: 2.8em; }
 .page h2[data-puff] svg { height: 1.9em; }
-.page h3[data-puff] svg { height: 2.8em; }
+.page h3[data-puff] svg, .page h3.preset-name svg { height: 2.8em; }
+.page h3.preset-name svg { display: block; width: auto; max-width: 100%; overflow: visible; }
+.page h3.preset-name.pending { color: transparent; }
 .page [data-puff].pending { color: transparent; }
 /* One line weight on screen, whatever size a piece is drawn at. */
 .page svg path[stroke]:not([data-part="band"]) { vector-effect: non-scaling-stroke; stroke-width: var(--line, 2.5px); }
@@ -156,5 +158,4 @@ figcaption { margin-top: 0.75rem; font-size: 0.8em; color: var(--mute); }
   .pg-inner { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow: auto; }
     #stage { min-height: 50vh; }
 }
-.sample { margin-top: 0.5rem; --line: 2.5px; }
-.sample svg { display: block; height: 4.5rem; width: auto; max-width: 100%; overflow: visible; }
+

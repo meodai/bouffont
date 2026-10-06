@@ -97,24 +97,28 @@ async function presetList() {
   const el = document.querySelector('[data-presets]');
   for (const name of Object.keys(presets)) {
     const sec = document.createElement('section');
+    // Each preset's name, written in that preset (not following the settings).
     const h3 = document.createElement('h3');
-    h3.dataset.puff = '';
+    h3.className = 'preset-name pending';
+    h3.dataset.preset = name;
     h3.textContent = name;
-    const sample = document.createElement('div');
-    sample.className = 'sample';
-    sample.dataset.sample = name;
     const p = document.createElement('p');
     p.textContent = ABOUT[name] ?? '';
-    sec.append(h3, sample, p);
+    sec.append(h3, p);
     el.append(sec);
   }
 }
 
-// One word per preset, in that preset.
 async function samples() {
-  for (const el of document.querySelectorAll('[data-sample]')) {
+  for (const el of document.querySelectorAll('[data-preset]')) {
     await idle();
-    el.append(svgEl(await piece({ text: 'puff', preset: el.dataset.sample }), `puff in ${el.dataset.sample}`));
+    const name = el.dataset.preset;
+    const markup = graffiti({ text: name, preset: name, seed: 'puff', font: await font(merriweatherUrl) }).svg;
+    const sr = document.createElement('span');
+    sr.className = 'sr';
+    sr.textContent = name;
+    el.replaceChildren(sr, svgEl(markup));
+    el.classList.remove('pending');
   }
 }
 
