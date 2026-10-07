@@ -7,7 +7,9 @@
 html, body { margin: 0; padding: 0; }
 html {
   font-family: 'Iosevka Web', 'Iosevka', ui-monospace, Menlo, monospace;
-  background: var(--paper); color: var(--ink); line-height: 1.6; overflow-x: clip;
+  /* The page: a vivid yellow (P3; #ffeb00 where oklch isn't supported). */
+  background: #ffeb00; background: oklch(0.94 0.23 100);
+  color: var(--ink); line-height: 1.6; overflow-x: clip;
 }
 ::selection { background: var(--ink); color: var(--paper); }
 a { color: var(--ink); text-decoration-thickness: 0.1em; text-underline-offset: 0.25em; transition: text-underline-offset 0.2s; }
@@ -80,7 +82,7 @@ figcaption { margin-top: 0.75rem; font-size: 0.8em; color: var(--mute); }
 /* ── Playground: full width at the bottom of the page ─────────────────────────── */
 .page.page-tail { padding-top: 0; padding-bottom: 3vmin; }
 .page:has(+ .page-tail), .page:has(+ .settings + .page-tail) { padding-bottom: 0; }
-.pg { border-top: 2px solid var(--ink); height: 100vh; min-height: 640px; font-size: 13px; line-height: 1.4; }
+.pg { border-top: 2px solid var(--ink); height: 100vh; min-height: 640px; font-size: 13px; line-height: 1.4; background: #fff; }
 .pg-inner { height: 100%; }
 .pg-main { display: flex; flex-direction: column; min-width: 0; height: 100%; }
 /* Room on the right for the floating settings. */
@@ -109,6 +111,11 @@ figcaption { margin-top: 0.75rem; font-size: 0.8em; color: var(--mute); }
   transition: opacity 0.25s ease, transform 0.35s var(--ease);
 }
 .settings.visible { opacity: 1; pointer-events: auto; transform: none; }
+/* The panel follows the system: white in light mode, black in dark mode. */
+.settings { color: var(--ink); }
+@media (prefers-color-scheme: dark) {
+  .settings { --ink: #fff; --paper: #000; --mute: #9a9a9a; }
+}
 .settings-title {
   padding: 0.6rem 0.8rem; cursor: pointer; list-style: none; user-select: none;
   display: flex; justify-content: space-between; align-items: center; font-weight: 700;
