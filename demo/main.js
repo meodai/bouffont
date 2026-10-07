@@ -99,7 +99,7 @@ function code() {
   const name = varName();
   const { text, seed, ...rest } = overrides;
   const body = [`text: ${str(text ?? '')}`, 'font', `seed: ${toJs(seed ?? 1)}`, `...${name}`,
-    ...Object.entries(rest).map(([k, v]) => (NESTED.includes(k) && recipe[k] && typeof recipe[k] === 'object'
+    ...Object.entries(rest).map(([k, v]) => (NESTED.includes(k) && recipe[k] && typeof recipe[k] === 'object' && v && typeof v === 'object'
       ? `${key(k)}: { ...${name}.${k}, ${toJs(v).replace(/^\{ ?|\s*\}$/g, '')} }`
       : `${key(k)}: ${toJs(v, '  ')}`))];
   return `import { graffiti, loadFont } from 'bouffont';
