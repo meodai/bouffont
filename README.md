@@ -4,11 +4,15 @@ Generative puffy lettering as SVG. Pick a font, write some text, and let growth
 strategies swell, block, snap and stretch each letter until the letters meet each
 other and an outer shape. Black & white, seeded, runs in the browser and Node.
 
+```sh
+npm install bouffont
+```
+
 ```js
-import { graffiti, loadFont } from 'bouffont';
+import { bouffont, loadFont } from 'bouffont';
 
 const font = await loadFont('/fonts/inter.woff'); // URL, ArrayBuffer or opentype.js Font
-const piece = graffiti({ text: 'bouffont', font, seed: 7, preset: 'throwup' });
+const piece = bouffont({ text: 'bouffont', font, seed: 7, preset: 'throwup' });
 
 document.body.innerHTML = piece.svg;
 piece.letters; // the geometry: [{ char, shape: [[{x, y}, …], …] }, …]

@@ -2,7 +2,7 @@
 // usage: node scripts/gallery.js [TEXT] [seed]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
-import { graffiti, loadFont, presets } from '../src/index.js';
+import { bouffont, loadFont, presets } from '../src/index.js';
 
 const text = process.argv[2] ?? 'bouffont';
 const seed = process.argv[3] ?? 7;
@@ -24,7 +24,7 @@ const t0 = performance.now();
 rows.forEach((row, r) => {
   cells.push(`<text x="10" y="${r * cellH + cellH / 2}" font-family="monospace" font-size="16">${row.label}</text>`);
   seeds.forEach((s, c) => {
-    const piece = graffiti({ text, font, seed: s, ...row.opts });
+    const piece = bouffont({ text, font, seed: s, ...row.opts });
     const inner = piece.svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
     const [x, y, w, h] = piece.viewBox;
     const scale = Math.min((cellW - 20) / w, (cellH - 20) / h);
@@ -42,4 +42,6 @@ console.log(`${rows.length * seeds.length} pieces in ${ms.toFixed(0)}ms → gall
 try {
   execFileSync('rsvg-convert', ['-w', '1400', '-o', out.pathname.replace('.svg', '.png'), out.pathname]);
   console.log('→ gallery/sheet.png');
-} catch {}
+} catch {
+  // rsvg-convert not installed: the SVG is enough
+}

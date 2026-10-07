@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { graffiti, loadFont } from '../src/index.js';
+import { bouffont, loadFont } from '../src/index.js';
 
 const font = await loadFont(
   // happy-dom replaces import.meta.url, so resolve from the project root.
@@ -11,7 +11,7 @@ const font = await loadFont(
 
 describe('piece.dom()', () => {
   it('returns the svg element and references to fills, outlines and lines', () => {
-    const piece = graffiti({ text: 'gef', font, preset: 'throwup', seed: 1, render: { order: 'rtl' } });
+    const piece = bouffont({ text: 'gef', font, preset: 'throwup', seed: 1, render: { order: 'rtl' } });
     const dom = piece.dom();
     expect(dom.svg.tagName.toLowerCase()).toBe('svg');
     expect(dom.fills).toHaveLength(3);
@@ -29,7 +29,7 @@ describe('piece.dom()', () => {
   });
 
   it('includes the outer outline band in outlines and strokes', () => {
-    const dom = graffiti({ text: 'ab', font, preset: 'bubble' }).dom();
+    const dom = bouffont({ text: 'ab', font, preset: 'bubble' }).dom();
     expect(dom.band).toBeTruthy();
     expect(dom.outlines[0]).toBe(dom.band);
     expect(dom.strokes).toContain(dom.band);
@@ -37,9 +37,9 @@ describe('piece.dom()', () => {
   });
 
   it('works for merged pieces and empty text', () => {
-    const merged = graffiti({ text: 'ab', font, preset: 'throwup', render: { mode: 'merge' } }).dom();
+    const merged = bouffont({ text: 'ab', font, preset: 'throwup', render: { mode: 'merge' } }).dom();
     expect(merged.letters).toHaveLength(1);
     expect(merged.letters[0].index).toBe('all');
-    expect(graffiti({ text: '', font }).dom().fills).toHaveLength(0);
+    expect(bouffont({ text: '', font }).dom().fills).toHaveLength(0);
   });
 });

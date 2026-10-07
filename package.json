@@ -1,32 +1,56 @@
 {
   "name": "bouffont",
-  "version": "0.0.1",
-  "description": "Generative puffy lettering as SVG",
-  "main": "src/index.js",
-  "scripts": {
-    "dev": "vite",
-    "test": "vitest run",
-    "gallery": "node scripts/gallery.js",
-    "build": "vite build",
-    "preview": "vite preview",
-    "fonts": "sh scripts/subset-fonts.sh"
-  },
+  "version": "0.1.0",
+  "description": "Generative puffy lettering as SVG: grow the letters of any font into one coherent hand.",
   "keywords": [
     "svg",
     "generative",
     "creative-coding",
     "lettering",
     "typography",
-    "bubble-letters"
+    "bubble-letters",
+    "font",
+    "opentype"
   ],
-  "author": "David Aerne",
+  "homepage": "https://meodai.github.io/bouffont/",
+  "bugs": {
+    "url": "https://github.com/meodai/bouffont/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meodai/bouffont.git"
+  },
   "license": "MIT",
+  "author": "David Aerne",
   "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest run",
+    "gallery": "node scripts/gallery.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "fonts": "sh scripts/subset-fonts.sh",
+    "lint": "eslint .",
+    "prepublishOnly": "npm run lint && npm test"
+  },
   "dependencies": {
     "clipper-lib": "^6.4.2",
     "opentype.js": "^2.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@fontsource/archivo-black": "^5.3.0",
     "@fontsource/bangers": "^5.3.0",
     "@fontsource/bricolage-grotesque": "^5.3.0",
@@ -38,14 +62,10 @@
     "@fontsource/playfair-display": "^5.3.0",
     "@fontsource/roboto": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
     "happy-dom": "^20.14.5",
     "vite": "^8.3.3",
     "vitest": "^5.0.3"
-  },
-  "exports": {
-    ".": "./src/index.js"
-  },
-  "files": [
-    "src"
-  ]
+  }
 }

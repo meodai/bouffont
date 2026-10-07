@@ -76,7 +76,7 @@ function generations(spec, amount) {
  * @param {object} [o.render]    { mode, order, stroke, outline, invert, background }
  *                               order: 'ltr' | 'rtl' | 'center' | 'edges' | 'random'
  */
-export function graffiti(o) {
+export function bouffont(o) {
   const base = o.preset ? presets[o.preset] : {};
   if (o.preset && !base) throw new Error(`bouffont: unknown preset "${o.preset}"`);
   const opts = { size: 200, tracking: 0, seed: 1, knit: 0, ...base, ...o, render: { ...base.render, ...o.render } };

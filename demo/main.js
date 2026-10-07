@@ -1,4 +1,4 @@
-import { graffiti, loadFont, presets, envelopes, geom } from "../src/index.js";
+import { bouffont, loadFont, presets, envelopes, geom } from "../src/index.js";
 import iosevkaUrl from "./fonts/iosevka-400-normal.woff?url";
 import { highlightCode } from "./highlight.js";
 
@@ -47,7 +47,7 @@ const getFont = async (name) =>
 
 // ── State ────────────────────────────────────────────────────────────────────────
 // What the code panel shows: the preset's full recipe (editable, on top) and the
-// options passed to graffiti(): text, seed, the spread recipe and your changes.
+// options passed to bouffont(): text, seed, the spread recipe and your changes.
 // Defaults match the page titles: Merriweather, throwup.
 let fontName = fonts.Merriweather ? "Merriweather" : Object.keys(fonts)[0];
 let presetName = Object.keys(presets)[0];
@@ -139,14 +139,14 @@ function code() {
         : `${key(k)}: ${toJs(v, "  ")}`,
     ),
   ];
-  return `import { graffiti, loadFont } from 'bouffont';
+  return `import { bouffont, loadFont } from 'bouffont';
 
 const font = await loadFont('fonts/${fonts[fontName].file}'); // ${fontName}
 
 // The ${presetName} preset in full (same as presets.${presetName}): edit it freely.
 const ${name} = ${toJs(recipe)};
 
-const piece = graffiti({
+const piece = bouffont({
 ${body.map((l) => `  ${l},`).join("\n")}
 });
 
@@ -155,7 +155,7 @@ document.body.innerHTML = piece.svg;
 }
 
 // Run the edited code with stand-ins for the library, to read back the recipe object
-// and the options passed to graffiti(). A playground on your own machine: plain JS.
+// and the options passed to bouffont(). A playground on your own machine: plain JS.
 const AsyncFunction = (async () => {}).constructor;
 async function parseCode(src) {
   const name = varName();
@@ -165,7 +165,7 @@ async function parseCode(src) {
     src.replace(/^\s*import\s[^;]*;?\s*$/gm, "") +
     `\n;return typeof ${name} === 'undefined' ? undefined : ${name};`;
   const run = new AsyncFunction(
-    "graffiti",
+    "bouffont",
     "loadFont",
     "presets",
     "document",
@@ -184,7 +184,7 @@ async function parseCode(src) {
     { body: {} },
   );
   if (!opts || typeof opts !== "object")
-    throw new Error("graffiti() was not called with an options object");
+    throw new Error("bouffont() was not called with an options object");
   const base = found && typeof found === "object" ? found : {};
   const { font, text, seed, ...rest } = opts;
   const diff = { text, seed };
@@ -365,7 +365,7 @@ let last = "";
 async function draw() {
   const t0 = performance.now();
   try {
-    const piece = graffiti({ ...effective(), font: await getFont(fontName) });
+    const piece = bouffont({ ...effective(), font: await getFont(fontName) });
     last = piece.svg;
     // On top / repel / knit only act where letters overlap or nearly touch.
     const L = piece.letters;

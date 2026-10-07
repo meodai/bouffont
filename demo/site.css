@@ -601,8 +601,14 @@ figcaption {
   min-width: 0;
 }
 .field > .toggle-select {
+  flex: 1;
   min-width: 0;
   color: var(--ink);
+}
+/* In the panel, dropdowns fill their row (chevron at the right end). */
+.settings .toggle-select select {
+  field-sizing: fixed;
+  width: 100%;
 }
 .field > .toggle {
   min-width: 0;

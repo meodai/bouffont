@@ -61,11 +61,11 @@
 
     <h2 data-puff>Use it</h2>
     <pre class="code"><code>npm install bouffont</code></pre>
-    <pre class="code"><code>import { graffiti, loadFont } from 'bouffont';
+    <pre class="code"><code>import { bouffont, loadFont } from 'bouffont';
 
 const font = await loadFont('/fonts/iosevka.woff'); // any TTF, OTF or WOFF
 
-const piece = graffiti({
+const piece = bouffont({
   text: 'bouffont',
   font,
   seed: 'puff',

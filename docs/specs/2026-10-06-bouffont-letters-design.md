@@ -2,7 +2,7 @@
 
 ## Intent
 A creative-coding JS library (ESM, browser + Node) that turns text + a font into a
-graffiti-style piece as SVG. Seeded and deterministic. Black & white only. Focus is the
+bouffont-style piece as SVG. Seeded and deterministic. Black & white only. Focus is the
 letters themselves — no backgrounds, fills/gradients, 3D extrusion or splitting.
 
 ## Pipeline
@@ -63,9 +63,9 @@ Strategies chain in order: `[['inflate', {amount: .1}], ['angular'], …]`.
 
 ## API
 ```js
-import { graffiti, loadFont, presets } from 'bouffont';
+import { bouffont, loadFont, presets } from 'bouffont';
 const font = await loadFont(url | ArrayBuffer);
-const piece = graffiti({ text: 'SANE', font, seed: 42, ...presets.throwup });
+const piece = bouffont({ text: 'SANE', font, seed: 42, ...presets.throwup });
 piece.svg      // string
 piece.letters  // geometry, for further creative coding
 ```

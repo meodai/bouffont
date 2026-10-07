@@ -1,6 +1,6 @@
 // The page: every title is written by bouffont (Iosevka, one preset each), plus the
 // figures. The playground at the bottom is demo/main.js.
-import { graffiti, loadFont, presets } from '../src/index.js';
+import { bouffont, loadFont, presets } from '../src/index.js';
 import { highlightBlocks } from './highlight.js';
 // Iosevka subset to Latin (npm run fonts); woff because opentype.js can't read woff2.
 import iosevkaUrl from './fonts/iosevka-400-normal.woff?url';
@@ -25,7 +25,7 @@ function svgEl(markup, label) {
   return svg;
 }
 
-const piece = async (opts) => graffiti({ font: await font(iosevkaUrl), seed: 'puff', ...opts }).svg;
+const piece = async (opts) => bouffont({ font: await font(iosevkaUrl), seed: 'puff', ...opts }).svg;
 
 // ── Titles ─────────────────────────────────────────────────────────────────────
 // Every title is grown with the settings panel's options (main.js broadcasts them),
@@ -43,7 +43,7 @@ async function titles() {
     if (run !== titleRun) return; // newer settings arrived: start over with those
     let markup;
     try {
-      markup = graffiti({ ...titleOptions, text, font: await font(titleFont) }).svg;
+      markup = bouffont({ ...titleOptions, text, font: await font(titleFont) }).svg;
     } catch {
       continue; // e.g. half-typed options in the playground code
     }
@@ -78,7 +78,7 @@ async function fonts() {
   const el = document.querySelector('[data-fonts]');
   for (const [name, url] of [['Inter', interUrl], ['Playfair Display', playfairUrl], ['Grechen Fuemen', grechenUrl]]) {
     await idle();
-    const markup = graffiti({ text: 'Hand', font: await font(url), seed: 'puff', preset: 'throwup' }).svg;
+    const markup = bouffont({ text: 'Hand', font: await font(url), seed: 'puff', preset: 'throwup' }).svg;
     el.append(figure(markup, name));
   }
 }
@@ -113,7 +113,7 @@ async function samples() {
   for (const el of document.querySelectorAll('[data-preset]')) {
     await idle();
     const name = el.dataset.preset;
-    const markup = graffiti({ text: name, preset: name, seed: 'puff', font: await font(merriweatherUrl) }).svg;
+    const markup = bouffont({ text: name, preset: name, seed: 'puff', font: await font(merriweatherUrl) }).svg;
     const sr = document.createElement('span');
     sr.className = 'sr';
     sr.textContent = name;
@@ -125,7 +125,7 @@ async function samples() {
 // Every part is yours: per-letter fills ink up in a wave; hovering pins a letter.
 async function parts() {
   const el = document.querySelector('[data-parts]');
-  const piece = graffiti({ text: 'bouffont', font: await font(iosevkaUrl), seed: 'puff', preset: 'bubbles' });
+  const piece = bouffont({ text: 'bouffont', font: await font(iosevkaUrl), seed: 'puff', preset: 'bubbles' });
   const { svg, letters } = piece.dom();
   svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
   svg.setAttribute('role', 'img');
