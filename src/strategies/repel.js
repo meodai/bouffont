@@ -13,7 +13,7 @@
 // The split works on each letter's filled outline (counters and crease slits closed),
 // then each letter's own slits are cut back out. Otherwise a neighbour would claim a
 // slit as free space and poke a sliver into the letter.
-import { area, bbox, close, difference, intersection, normalize, offset, signedArea, union } from '../geom/clip.js';
+import { area, bbox, close, difference, intersection, normalize, offset, open, signedArea, union } from '../geom/clip.js';
 import { smoothRing } from '../geom/path.js';
 import { blur, contour, makeGrid } from '../geom/raster.js';
 import { nearestSeed, scanFill } from '../geom/grid.js';
@@ -35,6 +35,28 @@ function fill(own, shapes, contested, delta, maxSteps) {
     if (!grew) break;
   }
   return own;
+}
+
+// Where letters cross, a letter can win part of its own slit or crease (it counts as
+// covering those) that is cut back out at the end, leaving a hole that a neighbour
+// really covers. Give such holes back to that neighbour, unless they are as narrow
+// as a slit: those stay open, so no letter pokes a sliver into another one.
+function refill(final, actual, contested, r) {
+  const ink = intersection(union(...actual), contested);
+  const holes = open(difference(ink, union(...final)), r);
+  if (!holes.length) return final;
+  const out = final.slice();
+  for (const piece of patches(holes)) {
+    const around = offset(piece, r);
+    let best = -1, bestTouch = -1;
+    for (let i = 0; i < actual.length; i++) {
+      if (!intersection(piece, actual[i]).length) continue;
+      const touch = area(intersection(around, out[i]));
+      if (touch > bestTouch) { best = i; bestTouch = touch; }
+    }
+    if (best >= 0) out[best] = union(out[best], intersection(piece, actual[best]));
+  }
+  return out;
 }
 
 // Outer rings only (counters filled), with thin slits closed.
@@ -61,47 +83,92 @@ function splitOnGrid(own, shapes, contested, cell) {
       if (b.minX <= pb.maxX && b.maxX >= pb.minX && b.minY <= pb.maxY && b.maxY >= pb.minY) near.push(i);
     }
     const g = makeGrid(patch, cell, cell * 3);
-    const { cols, rows } = g;
-    const size = cols * rows;
-    const inPatch = scanFill(patch, g);
-    const covers = new Map(), dist = new Map();
+    // Each letter works in its own window of the patch grid (aligned to it): a letter
+    // can only win cells it covers, so its distances, field and trace stay local.
+    const windows = new Map();
     for (const i of near) {
-      const c = scanFill(shapes[i], g);
+      const b = boxes[i];
+      const i0 = Math.max(0, Math.floor((b.minX - g.x0) / cell) - 2), j0 = Math.max(0, Math.floor((b.minY - g.y0) / cell) - 2);
+      const i1 = Math.min(g.cols - 1, Math.ceil((b.maxX - g.x0) / cell) + 2), j1 = Math.min(g.rows - 1, Math.ceil((b.maxY - g.y0) / cell) + 2);
+      if (i1 <= i0 || j1 <= j0) continue;
+      const w = { i0, j0, cols: i1 - i0 + 1, rows: j1 - j0 + 1, x0: g.x0 + i0 * cell, y0: g.y0 + j0 * cell, cell };
+      const inPatch = scanFill(patch, w);
+      const c = scanFill(shapes[i], w);
       let reaches = false;
-      for (let k = 0; k < size && !reaches; k++) reaches = inPatch[k] && c[k];
+      for (let k = 0; k < c.length && !reaches; k++) reaches = inPatch[k] && c[k];
       if (!reaches) continue;
-      covers.set(i, c);
-      const seed = scanFill(own[i], g);
-      const seeds = new Int32Array(size);
-      for (let k = 0; k < size; k++) seeds[k] = seed[k] ? k : -1;
-      const { dist2 } = nearestSeed(seeds, cols, rows);
-      const d = new Float32Array(size);
-      for (let k = 0; k < size; k++) d[k] = Math.sqrt(dist2[k]);
-      dist.set(i, d);
+      const seed = scanFill(own[i], w);
+      const seeds = new Int32Array(c.length);
+      for (let k = 0; k < c.length; k++) seeds[k] = seed[k] ? k : -1;
+      const { dist2 } = nearestSeed(seeds, w.cols, w.rows);
+      const d = new Float32Array(c.length);
+      for (let k = 0; k < c.length; k++) d[k] = Math.sqrt(dist2[k]);
+      windows.set(i, { ...w, covers: c, dist: d });
     }
+    const covers = windows; // the letters that reach into this patch
     const EDGE = 2; // field values are clamped to ± this many cells
+    // Everything below only looks at the neighbourhood of the patch.
+    const zone = offset(patch, cell * 3);
+    const local = new Map([...covers.keys()].map((i) => [i, intersection(own[i], zone)]));
+    const seedIn = new Map([...local].map(([i, o]) => [i, intersection(o, patch)]));
+    const allSeeds = union(...seedIn.values());
     let claimed = []; // in this patch, by earlier letters: blurred seams overlap a hair
-    for (const [i, ci] of [...covers].sort((a, b) => a[0] - b[0])) {
-      const di = dist.get(i), field = new Float32Array(size);
-      for (let k = 0; k < size; k++) {
-        if (!ci[k]) { field[k] = -EDGE; continue; }
-        // How much closer this letter is than the nearest rival covering the cell.
-        let best = EDGE;
-        for (const [j, cj] of covers) {
-          if (j === i || !cj[k]) continue;
-          // Ties go to the earlier letter.
-          best = Math.min(best, dist.get(j)[k] - di[k] + (j < i ? -1e-3 : 1e-3));
+    for (const [i, w] of [...windows].sort((x, y) => x[0] - y[0])) {
+      const field = new Float32Array(w.covers.length);
+      for (let y = 0; y < w.rows; y++) {
+        for (let x = 0; x < w.cols; x++) {
+          const k = y * w.cols + x;
+          if (!w.covers[k]) { field[k] = -EDGE; continue; }
+          // How much closer this letter is than the nearest rival covering the cell.
+          const gi = w.i0 + x, gj = w.j0 + y;
+          let best = EDGE;
+          for (const [j, r] of windows) {
+            if (j === i) continue;
+            const rx = gi - r.i0, ry = gj - r.j0;
+            if (rx < 0 || ry < 0 || rx >= r.cols || ry >= r.rows) continue;
+            const rk = ry * r.cols + rx;
+            if (!r.covers[rk]) continue;
+            // Ties go to the earlier letter.
+            best = Math.min(best, r.dist[rk] - w.dist[k] + (j < i ? -1e-3 : 1e-3));
+          }
+          field[k] = Math.max(-EDGE, Math.min(EDGE, best));
         }
-        field[k] = Math.max(-EDGE, Math.min(EDGE, best));
       }
       // A light blur irons out the cell steps of the distances: straight seams stay straight.
-      let traced = intersection(contour(blur({ ...g, data: field }, 2), 0), patch);
-      if (claimed.length) traced = difference(traced, claimed);
+      // Clip everything to this letter's window first: the patch can span many letters.
+      const x1 = w.x0 + (w.cols - 1) * cell, y1 = w.y0 + (w.rows - 1) * cell;
+      const rect = [[{ x: w.x0, y: w.y0 }, { x: x1, y: w.y0 }, { x: x1, y: y1 }, { x: w.x0, y: y1 }]];
+      const here = (shape) => (shape.length ? intersection(shape, rect) : shape);
+      let traced = intersection(contour(blur({ ...w, data: field }, 2), 0), here(patch));
+      // Seeds are never up for grabs: the blur can smear a thin core away, so each
+      // letter keeps its own seed and never takes another's.
+      const mySeed = seedIn.get(i);
+      const others = here(mySeed.length ? difference(allSeeds, mySeed) : allSeeds);
+      if (others.length) traced = difference(traced, others);
+      if (mySeed.length) traced = union(traced, mySeed);
+      const taken = here(claimed);
+      if (taken.length) traced = difference(traced, taken);
       // Keep only pieces attached to the letter's own body: no stray specks.
-      const body = offset(own[i], cell * 1.5);
+      const body = offset(local.get(i), cell * 1.5);
       const kept = patches(traced).filter((piece) => intersection(piece, body).length).flat();
       won[i].push(...kept);
       claimed = claimed.length ? union(claimed, kept) : kept;
+    }
+    // Whatever no letter took (specks, blurred edges): give each leftover piece to the
+    // covering letter it touches most, so repel never opens holes.
+    const ids = [...covers.keys()];
+    const left = claimed.length ? difference(patch, claimed) : patch;
+    const mine = new Map(); // each letter's area around this patch, built when first needed
+    const mineOf = (i) => mine.get(i) ?? mine.set(i, union(won[i], intersection(difference(shapes[i], contested), zone))).get(i);
+    for (const piece of patches(left)) {
+      const around = offset(piece, cell * 2);
+      let best = -1, bestTouch = -1;
+      for (const i of ids) {
+        if (!intersection(piece, shapes[i]).length) continue;
+        const touch = area(intersection(around, mineOf(i)));
+        if (touch > bestTouch) { best = i; bestTouch = touch; }
+      }
+      if (best >= 0) won[best].push(...intersection(piece, shapes[best]));
     }
   }
   return own.map((o, i) => (won[i].length ? union(difference(shapes[i], contested), intersection(won[i], shapes[i])) : difference(shapes[i], contested)));
@@ -145,7 +212,8 @@ export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, sl
   });
   if (method === 'grid') {
     own = splitOnGrid(own, shapes, contested, cell * ctx.stem);
-    return letters.map((l, i) => ({ ...l, shape: intersection(own[i], actual[i]) }));
+    return refill(letters.map((l, i) => intersection(own[i], actual[i])), actual, contested, slit * ctx.stem)
+      .map((shape, i) => ({ ...letters[i], shape }));
   }
   own = fill(own, shapes, contested, delta, maxSteps);
 
