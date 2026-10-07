@@ -1,6 +1,7 @@
-// Styles. Every preset first redraws the letters from their structure with one pen
-// (`structure`), so the style comes from these rules, not from the font. All lengths
-// below are in pens (the structure pen width).
+// Styles. Most presets first redraw the letters from their structure with one pen
+// (`structure`), so the style comes from these rules, not from the font; `crowd` grows
+// the font's own outlines. All lengths below are in stems (the pen width, or the font's
+// stroke thickness without structure).
 const pen = { pen: 0.15, spacing: 0.3 };
 
 export const presets = {
@@ -63,6 +64,20 @@ export const presets = {
     // Straight edges are the point here: no curve fitting.
     generations: [['block', { amount: 0.3 }, { keep: 0.25 }], ['angular', {}, { detail: 0.2, bulge: 'out' }]],
     render: { mode: 'stack', stroke: 0.14, curves: 0, lines: { angles: 8, cap: 'square' } },
+  },
+
+  // The throw-up swell on the font's own outlines (no skeleton), lines and letters
+  // packed into each other and split into shared seams.
+  crowd: {
+    structure: false,
+    lineHeight: 0.5,
+    tracking: -1,
+    repel: true,
+    strategies: [
+      ['bounce', { y: 0.3, rotate: 4, scale: 0.04 }],
+      ['inflate', { amount: 0.5, smooth: 0.15, keep: 0.25 }],
+    ],
+    render: { mode: 'stack', stroke: 0.18, ink: 0.45 },
   },
 
   // Simulations (after nshelton.github.io/home/growth). Slower: seconds, not ms.

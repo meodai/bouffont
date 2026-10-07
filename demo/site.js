@@ -85,6 +85,7 @@ const ABOUT = {
   bubble: 'Letters grow until they lock together, wrapped in one outline.',
   block: 'A square pen, heavy blocks with cut corners, filling a rectangle.',
   simple: 'Edges at 0, 45 and 90 degrees only.',
+  crowd: 'The font’s own outlines, swollen, packed tight and split into shared seams.',
   coral: 'Differential line growth: the outline wrinkles as it grows.',
   frost: 'Diffusion-limited aggregation: particles freeze onto the letters.',
 };

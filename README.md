@@ -64,7 +64,7 @@ text + font → layout → structure → envelope → strategies → decorations
 ```
 
 - **layout**: glyph outlines in px, first baseline at y = 0, lines centred.
-- **structure** (on in every preset): each glyph is thinned to its centre lines
+- **structure** (on in every preset except `crowd`): each glyph is thinned to its centre lines
   (serifs, stroke contrast and terminals are dropped) and redrawn with one pen. The
   letters are then re-spaced by their new shapes. Regular weights work best; very
   heavy or high-contrast cuts can break. Skeletons are cached per font object, so
@@ -94,7 +94,7 @@ letter meets across a gap (a notch, the opening of a G), and run out through the
 | `text`        |         | |
 | `font`        |         | opentype.js Font, see `loadFont` |
 | `seed`        | `1`     | number or string |
-| `preset`      |         | `throwup`, `bubbles`, `bubble`, `block`, `simple`, and the slower simulations `coral`, `frost`; other options merge over it |
+| `preset`      |         | `throwup`, `bubbles`, `bubble`, `block`, `simple`, `crowd`, and the slower simulations `coral`, `frost`; other options merge over it |
 | `size`        | `200`   | px |
 | `lineHeight`  | `1`     | text may contain newlines; lines are centred, baselines this × `size` apart |
 | `structure`   | on in presets | redraw letters from their centre lines with one pen, see above |

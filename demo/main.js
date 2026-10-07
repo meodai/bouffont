@@ -327,8 +327,10 @@ function fromControl(id) {
       break;
     // Skeleton on: the preset's own structure; off: grow the font's real outlines.
     case "structure":
-      if (v === "on") delete overrides.structure;
-      else overrides.structure = false;
+      if (v === "off") overrides.structure = false;
+      // A preset without a skeleton (crowd) gets the usual pen.
+      else if (recipe.structure === false) overrides.structure = { pen: 0.15, spacing: 0.3 };
+      else delete overrides.structure;
       syncControls();
       break;
     default:
