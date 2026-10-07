@@ -195,6 +195,7 @@ a:hover {
   margin: 5vmin 0 0 7vw;
   padding: 1rem 1.25rem;
   border: 2px solid var(--ink);
+  background: #fff;
   overflow-x: auto;
   font: 0.9rem/1.6 inherit;
   font-family: inherit;
@@ -231,6 +232,78 @@ figcaption {
 }
 .presets p {
   margin: 0.25rem 0 0;
+}
+.toggle {
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline dashed;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.25em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.toggle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.toggle:hover {
+  text-decoration-style: solid;
+}
+/* An icon says what kind of control it is: a radio dot for one-of-many choices,
+   a square check for an on/off switch. */
+.toggle::before {
+  content: "";
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.35em;
+  border: 0.12em solid currentColor;
+  vertical-align: -0.02em;
+}
+.toggle[role="radio"]::before {
+  border-radius: 50%;
+}
+.toggle[role="radio"][aria-checked="true"]::before {
+  background: radial-gradient(circle, currentColor 0 35%, transparent 40%);
+}
+/* A dropdown in the text: the select looks like a word, with a chevron. */
+.toggle-select {
+  position: relative;
+  display: inline-block;
+}
+.toggle-select select {
+  field-sizing: content; /* as wide as the chosen name (site.js measures elsewhere) */
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0 1em 0 0;
+  cursor: pointer;
+  text-decoration: underline dashed;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.25em;
+}
+.toggle-select::after {
+  content: "";
+  position: absolute;
+  right: 0.15em;
+  top: 50%;
+  width: 0.4em;
+  height: 0.4em;
+  border-right: 0.12em solid currentColor;
+  border-bottom: 0.12em solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+.toggle-select select:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.toggle[role="switch"][aria-checked="true"]::before {
+  background: currentColor;
+  box-shadow: inset 0 0 0 0.1em var(--bg);
 }
 .parts {
   margin: 5vmin -10vmin;
@@ -562,7 +635,7 @@ figcaption {
 .editor {
   position: relative;
   height: 34vh;
-  background: var(--paper);
+  background: var(--bg);
 }
 .pg #code,
 #codeHl {

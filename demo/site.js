@@ -137,6 +137,65 @@ async function parts() {
   el.replaceChildren(svg);
 }
 
+// Words in the text are controls: they set the playground's settings (so the
+// playground and every title regrow) and follow the settings panel in turn.
+//   role="radio"  data-control="preset" data-value="block"     one of many
+//   role="switch" data-control="repel" data-on="on" data-off="off"   on / off
+//   <select data-mirror="font">                                  a dropdown
+// Size a select to its chosen option where `field-sizing: content` isn't supported.
+function fitSelect(sel) {
+  if (CSS.supports('field-sizing', 'content')) return;
+  const probe = document.createElement('span');
+  const cs = getComputedStyle(sel);
+  probe.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${cs.font}`;
+  probe.textContent = sel.selectedOptions[0]?.textContent ?? '';
+  document.body.append(probe);
+  sel.style.width = `calc(${probe.getBoundingClientRect().width}px + 1em)`;
+  probe.remove();
+}
+
+function toggles() {
+  const $ = (id) => document.getElementById(id);
+  const set = (id, value) => {
+    const el = $(id);
+    el.value = value;
+    el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input'));
+  };
+  const words = [...document.querySelectorAll('[data-toggles] .toggle')];
+  const mirrors = [...document.querySelectorAll('[data-mirror]')];
+  for (const m of mirrors) m.innerHTML = $(m.dataset.mirror).innerHTML;
+  const sync = () => {
+    for (const w of words) {
+      const value = $(w.dataset.control).value;
+      const on = w.dataset.value != null ? value === w.dataset.value : String(Number(value) || value) !== String(Number(w.dataset.off) || w.dataset.off);
+      w.setAttribute('aria-checked', on);
+    }
+    for (const m of mirrors) {
+      m.value = $(m.dataset.mirror).value;
+      fitSelect(m);
+    }
+  };
+  const act = (e) => {
+    const w = e.target.closest('.toggle');
+    if (!w) return;
+    if (e.type === 'keydown') {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+    }
+    if (w.dataset.value != null) set(w.dataset.control, w.dataset.value);
+    else set(w.dataset.control, w.getAttribute('aria-checked') === 'true' ? w.dataset.off : w.dataset.on);
+    sync();
+  };
+  // Spans, not buttons, so the phrases wrap like the words around them.
+  for (const p of document.querySelectorAll('[data-toggles]')) {
+    p.addEventListener('click', act);
+    p.addEventListener('keydown', act);
+  }
+  for (const m of mirrors) m.addEventListener('change', () => { set(m.dataset.mirror, m.value); sync(); });
+  addEventListener('bouffont:settings', sync);
+  sync();
+}
+
 async function generations() {
   const el = document.querySelector('[data-generations]');
   for (const og of [0, 0.5, 1]) {
@@ -165,6 +224,7 @@ await titles();
 // Only now does the page have its real height.
 addEventListener('scroll', showSettings, { passive: true });
 showSettings();
+toggles();
 await samples();
 await parts();
 await fonts();

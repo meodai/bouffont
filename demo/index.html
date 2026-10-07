@@ -17,20 +17,27 @@
     </p>
 
     <h2 data-puff>One hand, any font</h2>
-    <p>
-      The font serves as skeleton. Each glyph is thinned down to its centre
-      lines; serifs, stroke contrast and terminals are thrown away. Then every
+    <p data-toggles>
+      The font, <span class="toggle-select"><select data-mirror="font" aria-label="font"></select></span>,
+      serves as skeleton.
+      <span class="toggle" tabindex="0" role="switch" data-control="structure" data-on="on" data-off="off">Each glyph is thinned down to its centre lines</span>;
+      serifs, stroke contrast and terminals are thrown away. Then every
       letter is redrawn with the same pen. The style is a combination of the font's anatomy and the algorithm.
     </p>
     <div class="sbs" data-fonts></div>
 
     <h2 data-puff>Grown, not drawn</h2>
-    <p>
-      From there, growth strategies take over, applied in order: swell the
-      letters, pack them with circles, grow them step by step until they lock
-      into each other, cut their corners, snap their edges to 45°, or let them
-      wrinkle like coral and freeze. Where two letters meet they can
-      overlap, or repel each other into a shared seam.
+    <p data-toggles>
+      From there, growth strategies take over, applied in order:
+      <span class="toggle" tabindex="0" role="radio" data-control="preset" data-value="throwup">swell the letters</span>,
+      <span class="toggle" tabindex="0" role="radio" data-control="preset" data-value="bubbles">pack them with circles</span>,
+      <span class="toggle" tabindex="0" role="radio" data-control="preset" data-value="bubble">grow them step by step until they lock into each other</span>,
+      <span class="toggle" tabindex="0" role="radio" data-control="preset" data-value="block">cut their corners</span>,
+      <span class="toggle" tabindex="0" role="radio" data-control="preset" data-value="simple">snap their edges to 45°</span>, or let them
+      <span class="toggle" tabindex="0" role="radio" data-control="preset" data-value="coral">wrinkle like coral</span> and
+      <span class="toggle" tabindex="0" role="radio" data-control="preset" data-value="frost">freeze</span>. Where two letters meet they can
+      overlap, or
+      <span class="toggle" tabindex="0" role="switch" data-control="repel" data-on="on" data-off="off">repel each other into a shared seam</span>.
     </p>
     <p>
       Inner lines follow one rule for every letter: a line appears where the
@@ -43,8 +50,9 @@
     <div class="presets" data-presets></div>
 
     <h2 data-puff>Keep growing</h2>
-    <p>
-      After the letters meet, they can keep going. The swollen presets keep
+    <p data-toggles>
+      After the letters meet, they can
+      <span class="toggle" tabindex="0" role="switch" data-control="overgrow" data-on="0.6" data-off="0">keep going</span>. The swollen presets keep
       growing outward while their contacts stay put; the other presets run more
       generations of their own growth: another block swell, another round of
       wrinkles, another layer of frost.
