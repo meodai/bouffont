@@ -66,6 +66,9 @@ html {
   line-height: 1.6;
   overflow-x: clip;
 }
+p {
+  line-height: 1.6;
+}
 /*
 [data-part="fill"] {
   fill: var(--highlight);
