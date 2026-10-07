@@ -1,6 +1,7 @@
 // The page: every title is written by bouffont (Iosevka, one preset each), plus the
 // figures. The playground at the bottom is demo/main.js.
-import { bouffont, loadFont, presets } from '../src/index.js';
+import { presets } from '../src/index.js';
+import { pool } from './pool.js';
 import { highlightBlocks } from './highlight.js';
 // Iosevka subset to Latin (npm run fonts); woff because opentype.js can't read woff2.
 import iosevkaUrl from './fonts/iosevka-400-normal.woff?url';
@@ -10,10 +11,8 @@ import grechenUrl from '@fontsource/grechen-fuemen/files/grechen-fuemen-latin-40
 // The titles are grown from Merriweather.
 import merriweatherUrl from '@fontsource/merriweather/files/merriweather-latin-400-normal.woff?url';
 
-const fontCache = {};
-const font = (url) => (fontCache[url] ??= loadFont(url));
-// Let the browser breathe between pieces: each one takes a few to ~100 ms.
-const idle = () => new Promise((r) => (window.requestIdleCallback ?? setTimeout)(r));
+// Every piece grows in the worker pool; the page only places the SVG.
+const grow = async (opts, o) => (await pool.render({ seed: 'puff', ...opts }, o)).svg;
 
 function svgEl(markup, label) {
   const tpl = document.createElement('template');
@@ -25,41 +24,40 @@ function svgEl(markup, label) {
   return svg;
 }
 
-const piece = async (opts) => bouffont({ font: await font(iosevkaUrl), seed: 'puff', ...opts }).svg;
+// Write a piece into a heading, keeping its text for screen readers.
+function place(el, text, markup) {
+  const sr = document.createElement('span');
+  sr.className = 'sr';
+  sr.textContent = text;
+  el.replaceChildren(sr, svgEl(markup));
+  el.classList.remove('pending');
+}
 
 // ── Titles ─────────────────────────────────────────────────────────────────────
 // Every title is grown with the settings panel's options (main.js broadcasts them),
-// each with its own text. Redrawn shortly after the settings stop changing.
-const TITLE_DEFAULTS = { preset: 'throwup', seed: 'puff' };
-let titleOptions = TITLE_DEFAULTS, titleFont = merriweatherUrl, titleRun = 0, titleTimer;
+// each with its own text. New settings cancel the titles that haven't started yet.
+let titleOptions = { preset: 'throwup' }, titleFont = merriweatherUrl, titleRun, titleTimer;
 
-async function titles() {
-  const run = ++titleRun;
-  for (const el of document.querySelectorAll('[data-puff]')) {
-    const text = el.dataset.text ?? el.textContent.trim();
-    el.dataset.text = text;
+function titles() {
+  titleRun?.abort();
+  const run = (titleRun = new AbortController());
+  return Promise.all([...document.querySelectorAll('[data-puff]')].map(async (el) => {
+    const text = (el.dataset.text ??= el.textContent.trim());
     if (!el.querySelector('svg')) el.classList.add('pending');
-    await idle();
-    if (run !== titleRun) return; // newer settings arrived: start over with those
-    let markup;
     try {
-      markup = bouffont({ ...titleOptions, text, font: await font(titleFont) }).svg;
+      const markup = await grow({ ...titleOptions, text, font: titleFont }, { signal: run.signal });
+      if (!run.signal.aborted) place(el, text, markup);
     } catch {
-      continue; // e.g. half-typed options in the playground code
+      // aborted by newer settings, or half-typed options in the playground code
     }
-    const sr = document.createElement('span');
-    sr.className = 'sr';
-    sr.textContent = text;
-    el.replaceChildren(sr, svgEl(markup));
-    el.classList.remove('pending');
-  }
+  }));
 }
 
 addEventListener('bouffont:settings', (e) => {
   titleOptions = e.detail.options;
   titleFont = e.detail.fontUrl;
   clearTimeout(titleTimer);
-  titleTimer = setTimeout(titles, 250);
+  titleTimer = setTimeout(titles, 120);
 });
 
 // ── Figures ────────────────────────────────────────────────────────────────────
@@ -76,11 +74,9 @@ function figure(markup, caption) {
 
 async function fonts() {
   const el = document.querySelector('[data-fonts]');
-  for (const [name, url] of [['Inter', interUrl], ['Playfair Display', playfairUrl], ['Grechen Fuemen', grechenUrl]]) {
-    await idle();
-    const markup = bouffont({ text: 'Hand', font: await font(url), seed: 'puff', preset: 'throwup' }).svg;
-    el.append(figure(markup, name));
-  }
+  const list = [['Inter', interUrl], ['Playfair Display', playfairUrl], ['Grechen Fuemen', grechenUrl]];
+  const pieces = await Promise.all(list.map(([, font]) => grow({ text: 'Hand', font, preset: 'throwup' })));
+  el.append(...pieces.map((markup, i) => figure(markup, list[i][0])));
 }
 
 const ABOUT = {
@@ -93,7 +89,7 @@ const ABOUT = {
   frost: 'Diffusion-limited aggregation: particles freeze onto the letters.',
 };
 
-async function presetList() {
+function presetList() {
   const el = document.querySelector('[data-presets]');
   for (const name of Object.keys(presets)) {
     const sec = document.createElement('section');
@@ -109,23 +105,17 @@ async function presetList() {
   }
 }
 
-async function samples() {
-  for (const el of document.querySelectorAll('[data-preset]')) {
-    await idle();
+function samples() {
+  return Promise.all([...document.querySelectorAll('[data-preset]')].map(async (el) => {
     const name = el.dataset.preset;
-    const markup = bouffont({ text: name, preset: name, seed: 'puff', font: await font(merriweatherUrl) }).svg;
-    const sr = document.createElement('span');
-    sr.className = 'sr';
-    sr.textContent = name;
-    el.replaceChildren(sr, svgEl(markup));
-    el.classList.remove('pending');
-  }
+    place(el, name, await grow({ text: name, preset: name, font: merriweatherUrl }));
+  }));
 }
 
 // Every part is yours: per-letter fills ink up in a wave; hovering pins a letter.
 async function parts() {
   const el = document.querySelector('[data-parts]');
-  const piece = bouffont({ text: 'bouffont', font: await font(iosevkaUrl), seed: 'puff', preset: 'bubbles' });
+  const piece = await pool.render({ text: 'bouffont', font: iosevkaUrl, seed: 'puff', preset: 'bubbles' });
   const { svg, letters } = piece.dom();
   svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
   svg.setAttribute('role', 'img');
@@ -163,7 +153,6 @@ function toggles() {
   };
   const words = [...document.querySelectorAll('[data-toggles] .toggle')];
   const mirrors = [...document.querySelectorAll('[data-mirror]')];
-  for (const m of mirrors) m.innerHTML = $(m.dataset.mirror).innerHTML;
   const sync = () => {
     for (const w of words) {
       const value = $(w.dataset.control).value;
@@ -171,7 +160,9 @@ function toggles() {
       w.setAttribute('aria-checked', on);
     }
     for (const m of mirrors) {
-      m.value = $(m.dataset.mirror).value;
+      const src = $(m.dataset.mirror);
+      if (m.options.length !== src.options.length) m.innerHTML = src.innerHTML; // filled late
+      m.value = src.value;
       fitSelect(m);
     }
   };
@@ -198,10 +189,9 @@ function toggles() {
 
 async function generations() {
   const el = document.querySelector('[data-generations]');
-  for (const og of [0, 0.5, 1]) {
-    await idle();
-    el.append(figure(await piece({ text: 'grow', preset: 'block', overgrow: og }), `keep growing ${og}`));
-  }
+  const steps = [0, 0.5, 1];
+  const pieces = await Promise.all(steps.map((overgrow) => grow({ text: 'grow', font: iosevkaUrl, preset: 'block', overgrow })));
+  el.append(...pieces.map((markup, i) => figure(markup, `keep growing ${steps[i]}`)));
 }
 
 highlightBlocks();
@@ -218,14 +208,13 @@ const showSettings = () => {
   }
 };
 
-// Titles first (visible at once), then the figures.
-await presetList();
-await titles();
+// Titles first (visible at once), then the figures; the pool grows them in parallel.
+presetList();
+toggles();
+const titlesDone = titles();
+const rest = Promise.all([samples(), parts(), fonts(), generations()]);
+await titlesDone;
 // Only now does the page have its real height.
 addEventListener('scroll', showSettings, { passive: true });
 showSettings();
-toggles();
-await samples();
-await parts();
-await fonts();
-await generations();
+await rest;

@@ -89,7 +89,7 @@ export function bouffont(o) {
     tracking: opts.structure ? 0 : opts.tracking,
     lineHeight: opts.lineHeight ?? 1,
   });
-  const ctx = { stem: metrics.stem, metrics, size: opts.size, rng, envelope: null };
+  const ctx = { stem: metrics.stem, metrics, size: opts.size, rng, envelope: null, font: opts.font };
   if (!laid.length) {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg"/>';
     return { svg, letters: [], metrics, dom: (doc) => toDOM(svg, doc) };

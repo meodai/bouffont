@@ -26,6 +26,7 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
+    "./worker": "./src/pool.js",
     "./package.json": "./package.json"
   },
   "files": [

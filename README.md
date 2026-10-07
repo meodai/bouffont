@@ -1,65 +1,93 @@
 # bouffont
 
-Generative puffy lettering as SVG. Pick a font, write some text, and let growth
-strategies swell, block, snap and stretch each letter until the letters meet each
-other and an outer shape. Black & white, seeded, runs in the browser and Node.
+Generates lettering as SVG from a font and a text: each glyph is reduced to its
+centre lines, redrawn with one pen and grown by a list of strategies. Seeded and
+deterministic. Runs in the browser and in Node (ESM).
+
+## Install
 
 ```sh
 npm install bouffont
 ```
 
+## Usage
+
 ```js
 import { bouffont, loadFont } from 'bouffont';
 
-const font = await loadFont('/fonts/inter.woff'); // URL, ArrayBuffer or opentype.js Font
+const font = await loadFont('/fonts/inter.woff');
 const piece = bouffont({ text: 'bouffont', font, seed: 7, preset: 'throwup' });
 
-document.body.innerHTML = piece.svg;
-piece.letters; // the geometry: [{ char, shape: [[{x, y}, …], …] }, …]
+piece.svg;     // SVG markup (string)
+piece.letters; // geometry per letter: [{ char, shape: [[{ x, y }, …], …], … }, …]
+piece.metrics; // { stem, capHeight, … } in px
+piece.dom();   // SVG element plus references to its parts, see below
 ```
 
-Any font opentype.js can read works (TTF, OTF, WOFF). The idea is that the
-algorithm carries the style, not the font, so start from plain serif and sans
-fonts. The playground lists every `@fontsource/*` package installed as a dev
-dependency.
+`loadFont` accepts a URL, an ArrayBuffer (or typed array / Buffer) or an opentype.js
+`Font`. TTF, OTF and WOFF work; WOFF2 does not (opentype.js can't read it).
 
-```sh
-npm run dev       # playground (demo/)
-npm run gallery   # contact sheet of presets → gallery/sheet.png
-npm test
+In Node, read the file yourself:
+
+```js
+import { readFile } from 'node:fs/promises';
+const font = await loadFont(await readFile('inter.woff')); // a Buffer works
 ```
 
-## How it works
+### In a worker
+
+A piece takes roughly 15–500 ms depending on the preset and `repel`. To keep the
+page responsive and render several pieces in parallel, use the worker pool:
+
+```js
+import { createPool } from 'bouffont/worker';
+
+const pool = createPool(); // one worker per core, minus one (max 8); or { size: 4 }
+const { svg, metrics, ms } = await pool.render({ text: 'hi', font: '/fonts/inter.woff', preset: 'bubble' });
+```
+
+- `font` must be a URL (resolved against the page) or an ArrayBuffer. Each worker
+  loads a URL once and keeps it.
+- Options must be plain data: built-in strategies by name, no functions, no
+  `registerStrategy` (it doesn't reach the workers).
+- `pool.render(options, { signal, priority, letters })`: `signal` (AbortSignal)
+  drops the job if it hasn't started, `priority` puts it at the front of the queue,
+  `letters: true` also returns the letter geometry.
+- The result has `dom(doc)` like a piece. `pool.terminate()` stops the workers.
+- Needs a bundler or browser that supports module workers
+  (`new Worker(new URL('./worker.js', import.meta.url), { type: 'module' })`).
+
+## Pipeline
 
 ```
 text + font → layout → structure → envelope → strategies → decorations → svg
 ```
 
-**Structure** is what makes a style: the font only contributes where each letter's
-strokes go. Every glyph is thinned to its centre lines (serifs, stroke contrast and
-terminal shapes are dropped; crossbars and arms are kept) and redrawn with one pen,
-the same width, ends and joints for every letter, whatever the font. The letters
-are then re-spaced by their new shapes. All presets do this, so Inter, Playfair and
-Bricolage come out in the same hand. Regular weights skeletonise best; very heavy
-or high-contrast cuts can break.
+- **layout**: glyph outlines in px, first baseline at y = 0, lines centred.
+- **structure** (on in every preset): each glyph is thinned to its centre lines
+  (serifs, stroke contrast and terminals are dropped) and redrawn with one pen. The
+  letters are then re-spaced by their new shapes. Regular weights work best; very
+  heavy or high-contrast cuts can break. Skeletons are cached per font object, so
+  redrawing the same text with other options is faster.
 
-```js
-structure: { pen: 0.15, spacing: 0.3, cap: 'round', join: 'round' } // pen: × cap height
-structure: false // grow the font outline itself instead
-```
+  ```js
+  structure: { pen: 0.15, spacing: 0.3, cap: 'round', join: 'round', follow: 0 } // pen: × cap height
+  structure: false // grow the font outline itself
+  ```
 
-Every length option is in **stems**: the pen width when `structure` is on,
-otherwise the font's own stroke thickness, measured from its "O" (the idea comes
-from Florian Schulz's *The Anatomy of a Thousand Typefaces*).
+- **envelope**: optional outer shape the letters are warped into.
+- **strategies**: growth, applied in order.
+- **render**: outlines, fills and inner lines.
 
-On structured letters, inner lines follow **one rule**: a line is drawn where the
-swell coming from two parts of a letter's centre lines meets, but only where those
-parts face each other across a gap (a notch, the opening of a G), not at plain
-corners where strokes join. Lines run through the edge, so openings stay open.
-Inner lines don't snap to the `details.angles` palette; that only applies to letters
-grown from the font outline (`structure: false`).
+All length options are in **stems**: the pen width when `structure` is on, otherwise
+the font's stroke thickness, measured from its "O".
 
-### Options
+Inner lines of structured letters are drawn where the growth from two parts of a
+letter meets across a gap (a notch, the opening of a G), and run out through the edge.
+
+## Options
+
+`bouffont(options)`. A preset is merged under the other options.
 
 | option        | default | |
 |---------------|---------|---|
@@ -236,11 +264,17 @@ The same parts are marked in the string, so CSS can target them too:
 `[data-part="lines"]`, `[data-part="ink"]`, `[data-part="band"]`, with `data-index`
 and `data-char` on each letter group.
 
-## Not yet
+## Development
 
-Colour, fills, backgrounds, 3D, splitting, and letters built from a centre line
-(tags and simples drawn as strokes). The pipeline works on plain polygons, so a
-centre-line layout can feed in later.
+```sh
+npm run dev       # site and playground (demo/)
+npm run build     # build the site to dist/
+npm run gallery   # contact sheet of presets → gallery/sheet.png
+npm test
+npm run lint
+```
+
+The playground lists every `@fontsource/*` package installed as a dev dependency.
 
 ## License
 

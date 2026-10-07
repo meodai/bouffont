@@ -16,7 +16,7 @@ export function coral(letters, ctx, {
   from = 'core', // 'shape': measure reach from the current shape (more generations)
 } = {}) {
   const stem = ctx.stem;
-  const d = spacing * stem, R = repel * stem;
+  const d = spacing * stem, R = repel * stem, R2 = R * R;
   return letters.map((letter) => {
     // Only the outer outline grows; counters stay as they are.
     const largest = letter.shape.reduce((a, b) => (Math.abs(signedArea(b)) > Math.abs(signedArea(a)) ? b : a));
@@ -30,16 +30,30 @@ export function coral(letters, ctx, {
       const i = Math.round((p.x - lg.x0) / lg.cell), j = Math.round((p.y - lg.y0) / lg.cell);
       return i >= 0 && j >= 0 && i < lg.cols && j < lg.rows && inLimit[j * lg.cols + i] === 1;
     };
+    // The neighbour grid covers the limit (plus a cell of margin).
+    const hx0 = lg.x0 - R, hy0 = lg.y0 - R;
+    const hcols = Math.ceil((lg.cols * lg.cell) / R) + 3, hrows = Math.ceil((lg.rows * lg.cell) / R) + 3;
+    const hx = (p) => Math.min(hcols - 1, Math.max(0, Math.floor((p.x - hx0) / R)));
+    const hy = (p) => Math.min(hrows - 1, Math.max(0, Math.floor((p.y - hy0) / R)));
+    const hcell = (p) => hy(p) * hcols + hx(p);
     let rings = letter.shape.filter((r) => Math.sign(signedArea(r)) === sign)
       .map((ring) => resample(ring, d).map((p) => ({ x: p.x, y: p.y })));
     for (let it = 0; it < steps; it++) {
-      // Spatial hash of all nodes of this letter.
-      const hash = new Map();
-      const hk = (cx, cy) => cx * 73856093 + cy * 19349663; // numeric cell key
-      rings.forEach((ring, ri) => ring.forEach((p, i) => {
-        const k = hk(Math.floor(p.x / R), Math.floor(p.y / R));
-        const list = hash.get(k);
-        if (list) list.push(ri, i); else hash.set(k, [ri, i]);
+      // All nodes of this letter, bucketed into cells of size R (a counting sort into
+      // flat arrays; nodes never leave the limit, so the grid never grows).
+      let total = 0;
+      for (const ring of rings) total += ring.length;
+      const cellOf = new Int32Array(total);
+      const start = new Int32Array(hcols * hrows + 1);
+      let k = 0;
+      for (const ring of rings) for (const p of ring) start[(cellOf[k++] = hcell(p)) + 1]++;
+      for (let c = 0; c < hcols * hrows; c++) start[c + 1] += start[c];
+      const fillAt = start.slice(0, -1);
+      const entries = new Int32Array(total * 2);
+      k = 0;
+      rings.forEach((ring, ri) => ring.forEach((_, i) => {
+        const at = fillAt[cellOf[k++]]++ * 2;
+        entries[at] = ri; entries[at + 1] = i;
       }));
       rings = rings.map((ring, ri) => {
         const n = ring.length;
@@ -47,17 +61,17 @@ export function coral(letters, ctx, {
         const next = ring.map((p, i) => {
           const a = ring[(i - 1 + n) % n], b = ring[(i + 1) % n];
           let fx = ((a.x + b.x) / 2 - p.x) * attract, fy = ((a.y + b.y) / 2 - p.y) * attract;
-          const cx = Math.floor(p.x / R), cy = Math.floor(p.y / R);
-          for (let gx = cx - 1; gx <= cx + 1; gx++) {
-            for (let gy = cy - 1; gy <= cy + 1; gy++) {
-              const list = hash.get(hk(gx, gy));
-              if (!list) continue;
-              for (let t = 0; t < list.length; t += 2) {
-                const rj = list[t], j = list[t + 1];
+          const cx = hx(p), cy = hy(p);
+          for (let gx = Math.max(0, cx - 1); gx <= Math.min(hcols - 1, cx + 1); gx++) {
+            for (let gy = Math.max(0, cy - 1); gy <= Math.min(hrows - 1, cy + 1); gy++) {
+              const c = gy * hcols + gx;
+              for (let t = start[c] * 2, end = start[c + 1] * 2; t < end; t += 2) {
+                const rj = entries[t], j = entries[t + 1];
                 if (rj === ri && Math.abs(j - i) <= 1) continue;
                 const q = rings[rj][j];
-                const dx = p.x - q.x, dy = p.y - q.y, dist = Math.hypot(dx, dy);
-                if (dist > 0 && dist < R) {
+                const dx = p.x - q.x, dy = p.y - q.y, d2 = dx * dx + dy * dy;
+                if (d2 > 0 && d2 < R2) { // most neighbours are out of reach: skip the root
+                  const dist = Math.hypot(dx, dy);
                   const f = ((R - dist) / R) * 0.5;
                   fx += (dx / dist) * f * d; fy += (dy / dist) * f * d;
                 }

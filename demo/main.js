@@ -1,4 +1,5 @@
-import { bouffont, loadFont, presets, envelopes, geom } from "../src/index.js";
+import { presets, envelopes, geom } from "../src/index.js";
+import { pool } from "./pool.js";
 import iosevkaUrl from "./fonts/iosevka-400-normal.woff?url";
 import { highlightCode } from "./highlight.js";
 
@@ -40,10 +41,6 @@ const fill = (select, names) =>
 fill($("font"), Object.keys(fonts));
 fill($("preset"), Object.keys(presets));
 fill($("envelope"), ["(preset)", "none", ...Object.keys(envelopes)]);
-
-const loaded = {};
-const getFont = async (name) =>
-  (loaded[name] ??= await loadFont(fonts[name].url));
 
 // ── State ────────────────────────────────────────────────────────────────────────
 // What the code panel shows: the preset's full recipe (editable, on top) and the
@@ -362,10 +359,17 @@ $("code").addEventListener("input", async () => {
 
 // ── Drawing ──────────────────────────────────────────────────────────────────────
 let last = "";
+let drawing; // the draw in flight; a newer one supersedes it
 async function draw() {
   const t0 = performance.now();
+  drawing?.abort();
+  const run = (drawing = new AbortController());
   try {
-    const piece = bouffont({ ...effective(), font: await getFont(fontName) });
+    const piece = await pool.render(
+      { ...effective(), font: fonts[fontName].url },
+      { signal: run.signal, priority: true, letters: true },
+    );
+    if (run.signal.aborted) return;
     last = piece.svg;
     // On top / repel / knit only act where letters overlap or nearly touch.
     const L = piece.letters;
@@ -387,7 +391,7 @@ async function draw() {
     $("status").textContent =
       `${(performance.now() - t0).toFixed(0)} ms · stem ${piece.metrics?.stem.toFixed(1)}px`;
   } catch (e) {
-    $("status").textContent = e.message;
+    if (e.name !== "AbortError") $("status").textContent = e.message;
   }
 }
 

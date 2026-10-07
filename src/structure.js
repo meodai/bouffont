@@ -121,6 +121,28 @@ function respace(letters, gap, bin, word) {
   return out;
 }
 
+// Skeletons are the slowest part of a plain piece and depend only on the glyph, where
+// it sits and the pen, so they are kept per font: redrawing with other settings, or
+// another title with the same letters in the same place, skips them. Results are
+// shared, never mutated (every later step builds new letters).
+const skeletons = new WeakMap();
+const MAX_CACHED = 4000;
+function cached(font, letter, settings, make) {
+  if (!font || typeof font !== 'object') return make();
+  let cache = skeletons.get(font);
+  if (!cache) skeletons.set(font, (cache = new Map()));
+  const first = letter.shape[0]?.[0];
+  const key = `${letter.char}|${first?.x}|${first?.y}|${letter.shape.length}|${settings}`;
+  let hit = cache.get(key);
+  if (!hit) {
+    if (cache.size >= MAX_CACHED) cache.clear();
+    const made = make();
+    hit = { shape: made.shape, structure: made.structure };
+    cache.set(key, hit);
+  }
+  return { ...letter, shape: hit.shape, structure: hit.structure };
+}
+
 /**
  * @param {number} spacing  gap between letters, in pens (plus the piece's `tracking`)
  * @param {number} words    extra gap per word space, in pens
@@ -134,7 +156,8 @@ function respace(letters, gap, bin, word) {
  */
 export function applyStructure(letters, ctx, { pen = 0.17, arm = 0.12, long = 0.2, smooth = 8, clean = 0.15, spacing = 0.6, words = 3, cap = 'round', join = 'round', follow = 0 } = {}, tracking = 0) {
   const width = pen * ctx.metrics.capHeight;
-  const out = letters.map((letter) => {
+  const settings = [ctx.size, ctx.stem, pen, arm, long, smooth, clean, cap, join, follow].join();
+  const out = letters.map((letter) => cached(ctx.font, letter, settings, () => {
     // Only close hairline gaps; opening would delete thin hairlines (Playfair's e bar).
     const r = clean * ctx.stem;
     const src = r ? close(letter.shape, r) : letter.shape;
@@ -153,7 +176,7 @@ export function applyStructure(letters, ctx, { pen = 0.17, arm = 0.12, long = 0.
       return { points: simplify(pts, width * 0.04), closed: st.closed };
     });
     return { ...letter, shape: drawStructure(lines, width, { cap, join, follow }) || letter.shape, structure: lines };
-  });
+  }));
   const redraw = (lines) => drawStructure(lines, width, { cap, join, follow });
   // Re-space each line on its own, then centre the lines again.
   const byLine = new Map();
