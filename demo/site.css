@@ -614,7 +614,6 @@ figcaption {
   align-items: stretch;
   gap: 0.25rem;
 }
-.settings select,
 .settings input:not([type="range"]),
 .settings textarea {
   font: inherit;
