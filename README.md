@@ -179,7 +179,7 @@ Strategies can be given as `'inflate'`, `['inflate', { amount: 0.5 }]` or
 | `coral`   | `steps`, `spacing`, `repel`, `attract`, `push`, `reach` | differential line growth: the outer outline is a chain of nodes that pull together, push apart and creep outward, so it wrinkles; never further than `reach` from the pen drawing |
 | `dla`     | `reach`, `cell`, `particles`, `stick`, `crystal`, `arms`, `walk` | diffusion-limited aggregation: random walkers freeze onto the letter. `crystal` (0–1) only lets them stick along `arms` directions |
 | `overgrow` | `amount`, `seam`, `keep` | every letter swells by `amount`; space two letters both reach is split fairly with smooth seams, so contacts stay single lines and the outside keeps swelling. Counters stay open (also the top-level `overgrow` option) |
-| `repel`   | `step`, `seam` | splits every area two letters both cover between them, as if both grew into it at the same speed. Letters don't move. `seam` (stems) smooths the seams; `0` leaves them stepped |
+| `repel`   | `method`, `cell`, `step`, `seam` | splits every area two letters both cover between them, as if both grew into it at the same speed. Letters don't move. `method: 'grid'` (default) splits by distance on a grid of `cell` stems (default `0.08`); `method: 'grow'` grows in polygon steps of `step` stems and smooths the seams by `seam` stems (`0` leaves them stepped), 2–4× slower |
 
 Options every strategy accepts:
 

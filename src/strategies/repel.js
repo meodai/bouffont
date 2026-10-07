@@ -3,16 +3,20 @@
 // speed and pushed against each other. The result is a shared seam instead of one
 // letter sliding under the other. Letters do not move.
 //
-// Each letter's `core` (its shape before growth) seeds a territory; territories grow
-// in small steps through the contested area only, and whichever reaches a spot first
-// keeps it. Stepping leaves stair-steps on the seams, so the seams are smoothed
-// afterwards (only inside the contested area, the rest of the outline is untouched).
+// Each letter's `core` (its shape before growth) seeds a territory, and whichever
+// territory reaches a spot first keeps it. Two methods:
+// - 'grid' (default): distances on a small grid per contested patch; the seam is
+//   traced where two letters are equally close, smooth without a smoothing pass.
+// - 'grow': territories grow in small polygon steps (`step`), then the stair-steps on
+//   the seams are smoothed (`seam`). Slower; seams run a little straighter.
 //
 // The split works on each letter's filled outline (counters and crease slits closed),
 // then each letter's own slits are cut back out. Otherwise a neighbour would claim a
 // slit as free space and poke a sliver into the letter.
-import { area, close, difference, intersection, normalize, offset, signedArea, union } from '../geom/clip.js';
+import { area, bbox, close, difference, intersection, normalize, offset, signedArea, union } from '../geom/clip.js';
 import { smoothRing } from '../geom/path.js';
+import { blur, contour, makeGrid } from '../geom/raster.js';
+import { nearestSeed, scanFill } from '../geom/grid.js';
 
 // Grow territories into the unclaimed part of `contested`, one step at a time.
 function fill(own, shapes, contested, delta, maxSteps) {
@@ -41,7 +45,79 @@ function filled(shape, r) {
   return close(union(shape.filter((ring) => Math.sign(signedArea(ring)) === sign)), r);
 }
 
-export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, slit = 0.3 } = {}) {
+// The same split on a grid (method: 'grid'): every contested cell goes to the letter
+// whose own area is nearest, as if all grew at the same speed (straight-line
+// distance, not around corners). The seam is traced where two distances are equal,
+// between cells, so it comes out smooth without a smoothing pass. Each contested
+// patch gets its own small grid, with only the letters that reach into it.
+function splitOnGrid(own, shapes, contested, cell) {
+  const won = own.map(() => []);
+  const boxes = shapes.map((s) => bbox(s));
+  for (const patch of patches(contested)) {
+    const pb = bbox(patch);
+    const near = [];
+    for (let i = 0; i < shapes.length; i++) {
+      const b = boxes[i];
+      if (b.minX <= pb.maxX && b.maxX >= pb.minX && b.minY <= pb.maxY && b.maxY >= pb.minY) near.push(i);
+    }
+    const g = makeGrid(patch, cell, cell * 3);
+    const { cols, rows } = g;
+    const size = cols * rows;
+    const inPatch = scanFill(patch, g);
+    const covers = new Map(), dist = new Map();
+    for (const i of near) {
+      const c = scanFill(shapes[i], g);
+      let reaches = false;
+      for (let k = 0; k < size && !reaches; k++) reaches = inPatch[k] && c[k];
+      if (!reaches) continue;
+      covers.set(i, c);
+      const seed = scanFill(own[i], g);
+      const seeds = new Int32Array(size);
+      for (let k = 0; k < size; k++) seeds[k] = seed[k] ? k : -1;
+      const { dist2 } = nearestSeed(seeds, cols, rows);
+      const d = new Float32Array(size);
+      for (let k = 0; k < size; k++) d[k] = Math.sqrt(dist2[k]);
+      dist.set(i, d);
+    }
+    const EDGE = 2; // field values are clamped to ± this many cells
+    let claimed = []; // in this patch, by earlier letters: blurred seams overlap a hair
+    for (const [i, ci] of [...covers].sort((a, b) => a[0] - b[0])) {
+      const di = dist.get(i), field = new Float32Array(size);
+      for (let k = 0; k < size; k++) {
+        if (!ci[k]) { field[k] = -EDGE; continue; }
+        // How much closer this letter is than the nearest rival covering the cell.
+        let best = EDGE;
+        for (const [j, cj] of covers) {
+          if (j === i || !cj[k]) continue;
+          // Ties go to the earlier letter.
+          best = Math.min(best, dist.get(j)[k] - di[k] + (j < i ? -1e-3 : 1e-3));
+        }
+        field[k] = Math.max(-EDGE, Math.min(EDGE, best));
+      }
+      // A light blur irons out the cell steps of the distances: straight seams stay straight.
+      let traced = intersection(contour(blur({ ...g, data: field }, 2), 0), patch);
+      if (claimed.length) traced = difference(traced, claimed);
+      // Keep only pieces attached to the letter's own body: no stray specks.
+      const body = offset(own[i], cell * 1.5);
+      const kept = patches(traced).filter((piece) => intersection(piece, body).length).flat();
+      won[i].push(...kept);
+      claimed = claimed.length ? union(claimed, kept) : kept;
+    }
+  }
+  return own.map((o, i) => (won[i].length ? union(difference(shapes[i], contested), intersection(won[i], shapes[i])) : difference(shapes[i], contested)));
+}
+
+// Split a shape into its separate parts (each outer ring with the holes inside it).
+function patches(shape) {
+  if (!shape.length) return [];
+  const largest = shape.reduce((a, b) => (Math.abs(signedArea(b)) > Math.abs(signedArea(a)) ? b : a));
+  const sign = Math.sign(signedArea(largest));
+  const outers = shape.filter((r) => Math.sign(signedArea(r)) === sign);
+  if (outers.length === 1) return [shape];
+  return outers.map((r) => intersection(shape, [r])).filter((p) => p.length);
+}
+
+export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, slit = 0.3, method = 'grid', cell = 0.08 } = {}) {
   if (letters.length < 2) return letters;
   const actual = letters.map((l) => l.shape);
   const shapes = actual.map((s) => filled(s, slit * ctx.stem));
@@ -67,6 +143,10 @@ export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, sl
     const taken = union(...seeds.slice(0, i));
     return union(difference(s, contested), difference(seeds[i], taken));
   });
+  if (method === 'grid') {
+    own = splitOnGrid(own, shapes, contested, cell * ctx.stem);
+    return letters.map((l, i) => ({ ...l, shape: intersection(own[i], actual[i]) }));
+  }
   own = fill(own, shapes, contested, delta, maxSteps);
 
   if (seam) {
