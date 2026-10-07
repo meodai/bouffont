@@ -303,7 +303,7 @@ figcaption {
 }
 .toggle[role="switch"][aria-checked="true"]::before {
   background: currentColor;
-  box-shadow: inset 0 0 0 0.1em var(--bg);
+  box-shadow: inset 0 0 0 0.1em var(--surface, var(--bg)); /* gap in the surface colour */
 }
 .parts {
   margin: 5vmin -10vmin;
@@ -516,6 +516,9 @@ figcaption {
     opacity 0.25s ease,
     transform 0.35s var(--ease);
 }
+.settings {
+  --surface: var(--paper);
+}
 .settings.visible {
   opacity: 1;
   pointer-events: auto;
@@ -597,12 +600,57 @@ figcaption {
   flex: 1;
   min-width: 0;
 }
+.field > .toggle-select {
+  min-width: 0;
+  color: var(--ink);
+}
+.field > .toggle {
+  min-width: 0;
+  color: var(--ink);
+}
+/* Sliders: a thin line with a square handle, like the icons in the text. */
 .field input[type="range"] {
   flex: 1;
   min-width: 0;
   padding: 0;
   border: 0;
-  accent-color: var(--ink);
+  height: 1.2em;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.field input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--ink);
+}
+.field input[type="range"]::-moz-range-track {
+  height: 2px;
+  background: var(--ink);
+}
+.field input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 0.8em;
+  height: 0.8em;
+  margin-top: calc(1px - 0.4em);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+}
+.field input[type="range"]::-moz-range-thumb {
+  width: 0.8em;
+  height: 0.8em;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+}
+.field input[type="range"]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.field input[type="range"]:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 .field output {
   min-width: 2.8em;
@@ -614,14 +662,21 @@ figcaption {
   align-items: stretch;
   gap: 0.25rem;
 }
+/* Text and seed: written words with a dashed underline, like the text controls. */
 .settings input:not([type="range"]),
 .settings textarea {
   font: inherit;
   color: inherit;
-  background: var(--paper);
-  border: 2px solid var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 0.12em dashed currentColor;
   border-radius: 0;
-  padding: 4px 6px;
+  padding: 2px 0;
+}
+.settings input:not([type="range"]):focus,
+.settings textarea:focus {
+  outline: 0;
+  border-bottom-style: solid;
 }
 .settings textarea {
   resize: vertical;
