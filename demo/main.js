@@ -185,7 +185,6 @@ $('code').addEventListener('scroll', syncScroll);
 
 const writeCode = () => { $('code').value = code(); highlight(); $('code').classList.remove('error'); $('codeError').textContent = ''; };
 
-// A control changed: update the state, rewrite the code, redraw.
 function fromControl(id) {
   const v = $(id).value;
   switch (id) {
@@ -209,7 +208,6 @@ function fromControl(id) {
   schedule();
 }
 
-// The code was edited: parse it into the state, update the controls, redraw.
 let parsing = 0;
 $('code').addEventListener('input', async () => {
   highlight();

@@ -14,7 +14,6 @@ export function highlightCode(src) {
   return out + esc(src.slice(last));
 }
 
-// Highlight static code blocks in place.
 export function highlightBlocks(selector = 'pre.code code') {
   for (const el of document.querySelectorAll(selector)) el.innerHTML = highlightCode(el.textContent);
 }

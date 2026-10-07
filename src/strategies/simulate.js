@@ -70,7 +70,6 @@ export function coral(letters, ctx, {
           // Nodes stop at the reach limit instead of being cut off later.
           return insideLimit(moved) ? moved : p;
         });
-        // Split long edges.
         const split = [];
         for (let i = 0; i < next.length; i++) {
           const p = next[i], q = next[(i + 1) % next.length];

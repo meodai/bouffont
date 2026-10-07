@@ -46,7 +46,6 @@ export function runStrategies(letters, specs = [], ctx) {
     const rng = ctx.rng.fork(`strategy:${i}:${typeof type === 'string' ? type : 'fn'}`);
     const targets = pickTargets(current, opts, rng);
     const result = fn(current, { ...ctx, rng, targets }, opts);
-    // Untargeted letters keep their previous shape.
     const merged = result.map((l, k) => (targets[k] ? l : current[k]));
     // `grow` handles neighbours step by step itself.
     return fn.selfConstrained ? merged : constrain(merged, current, ctx, opts);

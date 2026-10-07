@@ -68,7 +68,6 @@ describe('neighbour awareness', () => {
     const avoid = runStrategies(letters, [['grow', { amount: 1.2, steps: 6, smooth: 0 }]], ctx);
     expect(overlap(free)).toBeGreaterThan(1000);
     expect(overlap(avoid)).toBeLessThan(50);
-    // and they actually grew
     const area = (ls) => ls.reduce((s, l) => s + geom.area(l.shape), 0);
     expect(area(avoid)).toBeGreaterThan(area(letters) * 1.3);
   });
