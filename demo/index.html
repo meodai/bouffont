@@ -18,7 +18,7 @@
 
     <h2 data-puff>One hand, any font</h2>
     <p>
-      The font only provides the bones. Each glyph is thinned down to its centre
+      The font serves as skeleton. Each glyph is thinned down to its centre
       lines; serifs, stroke contrast and terminals are thrown away. Then every
       letter is redrawn with the same pen, so a grotesk, a serif and a quirky
       display face all come out in one hand. The style lives in the algorithm,
@@ -119,6 +119,7 @@ bouffont</textarea></label>
       <div class="settings-section">Growth</div>
       <div class="settings-fields">
         <label class="field"><span>preset</span><select id="preset"></select></label>
+        <label class="field" title="on: redraw every letter from its skeleton with one pen; off: grow the font's real outlines"><span>skeleton</span><select id="structure"><option value="on">on</option><option value="off">off</option></select></label>
         <label class="field"><span>envelope</span><select id="envelope"></select></label>
         <label class="field"><span>align</span><select id="align"><option>middle</option><option>bottom</option><option>top</option><option>both</option></select></label>
         <label class="field" title="light letters grow more, heavy ones less: an even colour"><span>density</span><input id="density" type="range" min="0" max="1" step="0.05" value="0" /><output id="densityOut"></output></label>

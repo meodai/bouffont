@@ -73,7 +73,9 @@ function setNested(group, key, v, defaults = {}) {
 }
 const setRender = (key, v) => setNested('render', key, v, RENDER_DEFAULTS);
 const follow = () => asObj(effective().structure).follow ?? 0;
-const setFollow = (v) => setNested('structure', 'follow', v || undefined);
+const skeletonOn = () => effective().structure !== false;
+// Follow thickness drives the skeleton pen, so it only applies with the skeleton on.
+const setFollow = (v) => { if (skeletonOn()) setNested('structure', 'follow', v || undefined); };
 
 // ── Code panel ───────────────────────────────────────────────────────────────────
 const str = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n')}'`;
@@ -172,6 +174,8 @@ function syncControls() {
   $('repel').value = value('repel') ? 'on' : 'off';
   $('knit').value = value('knit') ? '0.25' : '0';
   $('order').value = renderValue('order');
+  $('structure').value = skeletonOn() ? 'on' : 'off';
+  $('follow').disabled = !skeletonOn();
   for (const id of Object.keys(sliders)) { $(id).value = sliders[id].get() ?? 0; showSlider(id); }
 }
 
@@ -202,6 +206,12 @@ function fromControl(id) {
     case 'repel': set('repel', v === 'on'); break;
     case 'knit': set('knit', Number(v)); break;
     case 'order': setRender('order', v); break;
+    // Skeleton on: the preset's own structure; off: grow the font's real outlines.
+    case 'structure':
+      if (v === 'on') delete overrides.structure;
+      else overrides.structure = false;
+      syncControls();
+      break;
     default: sliders[id].set(Number(v)); showSlider(id);
   }
   writeCode();
@@ -264,7 +274,7 @@ function broadcast() {
 }
 
 for (const id of ['text', 'seed', ...Object.keys(sliders)]) $(id).addEventListener('input', () => fromControl(id));
-for (const id of ['font', 'preset', 'envelope', 'align', 'repel', 'order', 'knit']) $(id).addEventListener('change', () => fromControl(id));
+for (const id of ['font', 'preset', 'envelope', 'align', 'repel', 'order', 'knit', 'structure']) $(id).addEventListener('change', () => fromControl(id));
 $('shuffle').addEventListener('click', () => {
   $('seed').value = Math.random().toString(36).slice(2, 7);
   fromControl('seed');
