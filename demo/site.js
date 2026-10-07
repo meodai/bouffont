@@ -182,7 +182,11 @@ function toggles() {
     p.addEventListener('click', act);
     p.addEventListener('keydown', act);
   }
-  for (const m of mirrors) m.addEventListener('change', () => { set(m.dataset.mirror, m.value); sync(); });
+  for (const m of mirrors) {
+    m.addEventListener('change', () => { set(m.dataset.mirror, m.value); sync(); });
+    // The playground fills its lists in its own script, maybe after this one ran.
+    new MutationObserver(sync).observe($(m.dataset.mirror), { childList: true });
+  }
   addEventListener('bouffont:settings', sync);
   sync();
 }
