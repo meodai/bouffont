@@ -34,6 +34,26 @@
 * {
   box-sizing: border-box;
 }
+/* Scrollbars: thin, square, ink on transparent, everywhere. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
 html,
 body {
   margin: 0;
@@ -330,6 +350,10 @@ figcaption {
   max-height: 100%;
   height: auto;
 }
+/* The playground piece is filled with the page colour. */
+#stage [data-part="fill"] {
+  fill: var(--bg);
+}
 .pg button,
 .settings button {
   font: inherit;
@@ -374,6 +398,17 @@ figcaption {
 }
 .code-panel[open] > * + * {
   margin-top: 8px;
+}
+.code-panel summary .summary-tools {
+  float: right;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-transform: none;
+  font-size: 12px;
+}
+.code-panel summary #status {
+  color: var(--mute);
 }
 .code-panel summary {
   cursor: pointer;
@@ -519,17 +554,6 @@ figcaption {
 .settings select:disabled {
   opacity: 0.35;
 }
-.settings-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.8rem;
-  border-top: 2px solid var(--ink);
-}
-.settings #status {
-  color: var(--mute);
-}
 
 /* Highlighted code: a <pre> behind a transparent textarea, same box and metrics. */
 .editor {
@@ -596,13 +620,36 @@ figcaption {
   color: #8a8a8a;
 }
 
+/* Mobile: the settings sit across the top of the screen (folded to their title bar
+   until opened), the piece fills the width below them. */
 @media (max-width: 800px) {
-  .pg-inner {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-    overflow: auto;
+  .settings {
+    top: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    max-height: 45svh;
+    border-width: 0 0 2px;
+  }
+  .pg {
+    height: 100svh;
+    min-height: 0;
+    padding-top: 2.6rem; /* the folded title bar */
+  }
+  body:has(.settings[open].visible) .pg {
+    padding-top: 45svh;
   }
   #stage {
-    min-height: 50vh;
+    padding: 16px;
+  }
+  #stage svg {
+    width: 100%;
+    max-height: none;
+  }
+  .code-panel {
+    padding-right: 16px;
+  }
+  .editor {
+    height: 40svh;
   }
 }

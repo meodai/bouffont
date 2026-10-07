@@ -138,7 +138,6 @@ bouffont</textarea></label>
         <label class="field"><span>simplify</span><input id="curves" type="range" min="0" max="0.5" step="0.01" value="0" /><output id="curvesOut"></output></label>
         <label class="field"><span>fairing</span><input id="fair" type="range" min="0" max="1" step="0.05" value="0" /><output id="fairOut"></output></label>
       </div>
-      <div class="settings-foot"><span id="status"></span><button id="download">download svg</button></div>
     </div>
   </details>
 
@@ -149,7 +148,7 @@ bouffont</textarea></label>
       <div class="pg-main">
         <div id="stage"></div>
         <details class="code-panel">
-          <summary>code: how to use it</summary>
+          <summary>code: how to use it <span class="summary-tools"><span id="status"></span><button id="download" type="button">download svg</button></span></summary>
           <div class="row"><span class="label">editable, the piece follows</span><span class="btns"><span id="codeError" class="err"></span> <button id="reset" title="back to the preset">reset</button> <button id="copy">copy</button></span></div>
           <div class="editor"><pre id="codeHl" aria-hidden="true"></pre><textarea id="code" spellcheck="false" wrap="off"></textarea></div>
         </details>

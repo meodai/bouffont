@@ -286,9 +286,14 @@ $('copy').addEventListener('click', async () => {
   }
   setTimeout(() => ($('copy').textContent = 'copy'), 1200);
 });
-$('download').addEventListener('click', () => {
+$('download').addEventListener('click', (e) => {
+  e.preventDefault(); // it sits in the code panel's summary: don't fold it
+  // Bake the fill colour the page shows (the playground fills use var(--bg)) into the file.
+  const shown = document.querySelector('#stage [data-part="fill"]');
+  const fill = shown ? getComputedStyle(shown).fill : null;
+  const svg = fill ? last.replace(/(data-part="fill"[^>]*?)fill="[^"]*"/g, `$1fill="${fill}"`) : last;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([last], { type: 'image/svg+xml' }));
+  a.href = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   a.download = `${(String(overrides.text) || 'piece').replace(/\s+/g, '-')}-${overrides.seed}.svg`;
   a.click();
 });
