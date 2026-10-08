@@ -301,9 +301,9 @@ The light-based effects share `angle`: where the light comes from, in degrees
 
 | effect | options | |
 |---|---|---|
-| `shine` | `angle`, `inset`, `width`, `length`, `dot` | specular highlight: a streak just inside the edge facing the light, with a dot past its end. White with a thin outline |
-| `shade` | `angle`, `inset`, `width` | the shine's opposite: a solid crescent just inside the edges facing away from the light |
-| `depth` | `angle`, `length`, `fill`, `merge` | the letters extruded away from the light (3D). `merge: true` (default): one block behind all letters; `false`: each letter's side stacked with it. `fill: 'paper'` (white, outlined) or `'ink'` |
+| `shine` | `angle`, `inset`, `width`, `length`, `dot`, `intensity` | specular highlight: a streak just inside the edge facing the light, with a dot past its end. White with a thin outline |
+| `shade` | `angle`, `inset`, `width`, `intensity` | the shine's opposite: a solid crescent just inside the edges facing away from the light |
+| `depth` | `angle`, `length`, `fill`, `merge`, `intensity` | the letters extruded away from the light (3D). `merge: true` (default): one block behind all letters; `false`: each letter's side stacked with it. `fill: 'paper'` (white, outlined) or `'ink'` |
 | `inline` | `inset` | a thin line inside every edge, counters too |
 
 `inset` is how far inside the edge an effect sits, in stems, set per effect (defaults:
@@ -314,11 +314,14 @@ drawn over the outline:
 effects: [['shade', { inset: 0.16 }], ['inline', { inset: 0.5 }], ['shine', { inset: -0.3 }]]
 ```
 
+`intensity` (default 1) scales an effect as a whole: more light (`shine`: a wider,
+longer streak and a bigger dot), a thicker `shade`, a deeper `depth`. `inline` has none.
+
 Effects inside the letters are drawn between the fill and the outline (with a negative
 inset, over it); `depth` is drawn before every letter, and the drawing grows to fit it.
 
 The fat band around the whole piece (as in `bubble` and `block`) is a render option,
-not an effect: `render: { outline: 0.6 }` (stems; `0` = none), for any preset. With
+not an effect: `render: { outline: 0.4 }` (stems; `0` = none), for any preset. With
 `band: 'letter'` each letter gets its own band instead, stacked with it.
 
 Custom effects: `registerEffect(name, (letter, ctx, opts) => [{ part, shape }])`.

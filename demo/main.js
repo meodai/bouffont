@@ -275,6 +275,20 @@ const setInset = (inset) => {
   });
   if (list.length) set("effects", list);
 };
+// Intensity: one value for all effects (inline has none); it also scales the band.
+const BAND = 0.4; // the band's width (stems) when the preset has none
+const bandBase = () => asObj(recipe.render).outline || BAND;
+const intensityValue = () =>
+  EFFECTS.map(effectOpts).find((o) => o?.intensity != null)?.intensity ??
+  (renderValue("outline") ? renderValue("outline") / bandBase() : 1);
+const setIntensity = (intensity) => {
+  const list = EFFECTS.flatMap((n) => {
+    const opts = effectOpts(n);
+    return opts ? [[n, n === "inline" ? opts : { ...opts, intensity }]] : [];
+  });
+  if (list.length) set("effects", list);
+  if (renderValue("outline")) setRender("outline", +(bandBase() * intensity).toFixed(3));
+};
 const setLight = (angle) => {
   const list = EFFECTS.flatMap((n) => {
     const opts = effectOpts(n);
@@ -309,6 +323,12 @@ const sliders = {
   fxInset: {
     get: () => insetValue(),
     set: (v) => setInset(v),
+    fmt: 2,
+  },
+  // How strong the effects are (and how thick the band).
+  fxIntensity: {
+    get: () => intensityValue(),
+    set: (v) => setIntensity(v),
     fmt: 2,
   },
   // Light direction of the shine (degrees; only with shine on).
@@ -368,6 +388,7 @@ function syncControls() {
   $("light").disabled = !LIT.some(effectOpts);
   lightDial?.sync();
   $("fxInset").disabled = !INSET.some(effectOpts);
+  $("fxIntensity").disabled = !["depth", "shade", "shine"].some(effectOpts) && !renderValue("outline");
   $("order").value = renderValue("order");
   $("structure").value = skeletonOn() ? "on" : "off";
   $("follow").disabled = !skeletonOn();
@@ -448,7 +469,7 @@ function fromControl(id) {
     // The band: a fat outline around the whole piece (render.outline), the preset's own
     // width or 0.6 stems.
     case "band":
-      setRender("outline", v === "on" ? (asObj(recipe.render).outline || 0.6) : 0);
+      setRender("outline", v === "on" ? +(bandBase() * intensityValue()).toFixed(3) : 0);
       syncControls(); // "per letter" needs a band
       break;
     // Band per letter: each letter its own band instead of one around the whole piece.

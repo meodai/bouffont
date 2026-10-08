@@ -7,7 +7,8 @@
 //         'under': before the letter's fill, inside its group (stacked with it) ·
 //         'behind': behind every letter (extrusions)
 // Light-based effects take `angle`: where the light comes from, in degrees (225 = top
-// left; 0 = right, 90 = down). Sizes in stems.
+// left; 0 = right, 90 = down). Sizes in stems. `intensity` (default 1) scales an effect
+// as a whole: more light (shine), a thicker shade, a deeper side (depth); inline has none.
 import { bbox, difference, intersection, offset, open, signedArea, union } from './geom/clip.js';
 
 const lightDir = (angle) => {
@@ -37,9 +38,13 @@ const outer = (shape) => {
  *   width   thickness of the streak
  *   length  how far along the edge it runs, from the spot facing the light
  *   dot     size of the dot (0 = none)
+ *   intensity  more light: a wider, longer streak and a bigger dot
  */
-export function shine(letter, ctx, { angle = 225, inset = 0.26, width = 0.4, length = 1.9, dot = 0.2 } = {}) {
+export function shine(letter, ctx, { angle = 225, inset = 0.26, width = 0.4, length = 1.9, dot = 0.2, intensity = 1 } = {}) {
   const stem = ctx.stem;
+  width *= intensity;
+  length *= intensity;
+  dot *= intensity;
   if (!letter.shape.length) return [];
   const { lx, ly } = lightDir(angle);
   const inner = offset(outer(letter.shape), -inset * stem);
@@ -90,8 +95,9 @@ export function shine(letter, ctx, { angle = 225, inset = 0.26, width = 0.4, len
  * Shade: the shine's opposite, a solid crescent just inside the edges that face away
  * from the light. Counters stay clear.
  */
-export function shade(letter, ctx, { angle = 225, inset = 0.16, width = 0.7 } = {}) {
+export function shade(letter, ctx, { angle = 225, inset = 0.16, width = 0.45, intensity = 1 } = {}) {
   const stem = ctx.stem;
+  width *= intensity;
   if (!letter.shape.length) return [];
   const { lx, ly } = lightDir(angle);
   const inner = offset(outer(letter.shape), -inset * stem);
@@ -111,7 +117,8 @@ export function shade(letter, ctx, { angle = 225, inset = 0.16, width = 0.7 } = 
  * each letter's side stacked with that letter. `fill`:
  * 'paper' (white, outlined) or 'ink' (solid; disappears into an outline band).
  */
-export function depth(letter, ctx, { angle = 225, length = 0.8, fill = 'paper', merge = true } = {}) {
+export function depth(letter, ctx, { angle = 225, length = 0.8, fill = 'paper', merge = true, intensity = 1 } = {}) {
+  length *= intensity;
   const stem = ctx.stem;
   if (!letter.shape.length) return [];
   const { lx, ly } = lightDir(angle);
