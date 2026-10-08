@@ -232,32 +232,39 @@ async function parseCode(src) {
 // Effects: the shine is `effects: [['shine', { angle }]]`.
 // Effects, kept in this order (depth is drawn behind the letters anyway); all but
 // inline follow the light. Options set in the code panel are kept.
-const EFFECTS = ["depth", "shade", "inline", "shine"];
+const EFFECTS = ["depth", "shade", "inline", "shine"]; // drawing order
 const LIT = ["depth", "shade", "shine"];
-const effectOpts = (name) => {
-  const e = (effective().effects ?? []).find((x) => (Array.isArray(x) ? x[0] : x?.type ?? x) === name);
-  return e ? (Array.isArray(e) ? e[1] ?? {} : typeof e === "string" ? {} : e) : null;
-};
-const lightAngle = () => LIT.map(effectOpts).find((o) => o?.angle != null)?.angle ?? 225;
+const REPEATABLE = ["shine", "shade", "inline"]; // may be added more than once
+// The effects as [name, opts] pairs, in drawing order; several of a kind keep their order.
+const effectList = () =>
+  (effective().effects ?? []).map((e) =>
+    Array.isArray(e) ? [e[0], { ...(e[1] ?? {}) }] : typeof e === "string" ? [e, {}] : (({ type, ...o }) => [type, o])(e),
+  );
+const effectOpts = (name) => effectList().find(([n]) => n === name)?.[1] ?? null;
+const sortEffects = (list) =>
+  list
+    .map((e, i) => [e, i])
+    .sort(([a, i], [b, j]) => EFFECTS.indexOf(a[0]) - EFFECTS.indexOf(b[0]) || i - j)
+    .map(([e]) => e);
+const setEffects = (list) => set("effects", list.length ? sortEffects(list) : undefined);
+const lightAngle = () => effectList().find(([n, o]) => LIT.includes(n) && o.angle != null)?.[1].angle ?? 225;
+// A newly added effect takes the light of the others.
+const addEffect = (name) => setEffects([...effectList(), [name, LIT.includes(name) ? { angle: lightAngle() } : {}]]);
+const removeEffect = (i) => setEffects(effectList().filter((_, k) => k !== i));
+// The switches in the text: on adds one (if there is none), off removes all of a kind.
 function setEffect(name, on) {
-  const list = EFFECTS.flatMap((n) => {
-    // A newly added effect takes the light of the others.
-    const opts = n === name ? (on ? (LIT.includes(n) ? { angle: lightAngle() } : {}) : null) : effectOpts(n);
-    return opts ? [[n, opts]] : [];
-  });
-  set("effects", list.length ? list : undefined);
+  if (on) {
+    if (!effectOpts(name)) addEffect(name);
+  } else setEffects(effectList().filter(([n]) => n !== name));
 }
-// Change one effect's options (undefined removes an option).
-const setEffectOpts = (name, changes) => {
-  const list = EFFECTS.flatMap((n) => {
-    let opts = effectOpts(n);
-    if (opts && n === name) {
-      opts = { ...opts, ...changes };
-      for (const k of Object.keys(opts)) if (opts[k] === undefined) delete opts[k];
-    }
-    return opts ? [[n, opts]] : [];
-  });
-  if (list.length) set("effects", list);
+// Change the options of the i-th effect (undefined removes an option).
+const setEffectOpts = (i, changes) => {
+  const list = effectList();
+  if (!list[i]) return;
+  const opts = { ...list[i][1], ...changes };
+  for (const k of Object.keys(opts)) if (opts[k] === undefined) delete opts[k];
+  list[i] = [list[i][0], opts];
+  setEffects(list);
 };
 // The band (render.outline): its width in stems when the preset has none.
 const BAND = 0.4;
@@ -313,30 +320,30 @@ const showSlider = (id) => {
 
 // ── Effects: a list of cards, each with its own settings and a × to remove it; new ones
 // come from the "add effect" dropdown. The band (render.outline) is listed like an effect.
-const FX_ORDER = ["shine", "shade", "inline", "depth", "band"];
-const fxOn = (n) => (n === "band" ? !!renderValue("outline") : !!effectOpts(n));
-const optSlider = (n, key, min, max, step, dflt) => ({
+const ADDABLE = ["shine", "shade", "inline", "depth", "band"];
+const optSlider = (i, key, min, max, step, dflt) => ({
   label: key, min, max, step,
-  get: () => effectOpts(n)?.[key] ?? dflt,
-  set: (v) => setEffectOpts(n, { [key]: v }),
+  get: () => effectList()[i]?.[1][key] ?? dflt,
+  set: (v) => setEffectOpts(i, { [key]: v }),
 });
-const inset = (n, dflt) => optSlider(n, "inset", -0.5, 1, 0.02, dflt);
-const intensity = (n) => optSlider(n, "intensity", 0.25, 2, 0.05, 1);
+const inset = (i, dflt) => optSlider(i, "inset", -0.5, 1, 0.02, dflt);
+const intensity = (i) => optSlider(i, "intensity", 0.25, 2, 0.05, 1);
+// Each card's settings, for the i-th effect (the band has no index).
 const FX = {
-  shine: { title: "a specular highlight on each letter", light: true, sliders: [inset("shine", 0.26), intensity("shine")] },
-  shade: { title: "a shade on the side away from the light", light: true, sliders: [inset("shade", 0.16), intensity("shade")] },
-  inline: { title: "a thin line inside every edge", sliders: [inset("inline", 0.3)] },
-  depth: {
+  shine: (i) => ({ title: "a specular highlight on each letter", light: true, sliders: [inset(i, 0.26), intensity(i)] }),
+  shade: (i) => ({ title: "a shade on the side away from the light", light: true, sliders: [inset(i, 0.16), intensity(i)] }),
+  inline: (i) => ({ title: "a thin line inside every edge", sliders: [inset(i, 0.3)] }),
+  depth: (i) => ({
     title: "3D: the letters extruded away from the light",
     light: true,
-    sliders: [intensity("depth")],
+    sliders: [intensity(i)],
     each: {
       title: "each letter its own side, stacked with it (instead of one block behind all)",
-      get: () => effectOpts("depth")?.merge === false,
-      set: (on) => setEffectOpts("depth", { merge: on ? false : undefined }),
+      get: () => effectList()[i]?.[1].merge === false,
+      set: (on) => setEffectOpts(i, { merge: on ? false : undefined }),
     },
-  },
-  band: {
+  }),
+  band: () => ({
     title: "a fat outline around the whole piece",
     sliders: [{
       label: "intensity", min: 0.25, max: 2, step: 0.05,
@@ -348,28 +355,29 @@ const FX = {
       get: () => renderValue("band") === "letter",
       set: (on) => setRender("band", on ? "letter" : "piece"),
     },
-  },
+  }),
 };
 const fxChanged = () => {
   syncControls();
   writeCode();
   schedule();
 };
-let fxShown = null; // the effects the cards were built for
+let fxShown = null; // the cards' labels, as built
 let fxSync = []; // per card: put the current values into its controls
-function buildEffects(list) {
+// The cards: [name, index in the effects list (null: the band), label].
+function buildEffects(items) {
   const cards = $("fxCards");
   cards.replaceChildren();
   fxSync = [];
-  for (const n of list) {
-    const fx = FX[n];
+  for (const [n, i, label] of items) {
+    const fx = FX[n](i);
     const card = document.createElement("div");
     card.className = "fx-card";
     card.title = fx.title;
-    card.innerHTML = `<div class="fx-head"><span class="fx-name">${n}</span><button type="button" class="fx-remove" aria-label="remove ${n}" title="remove">×</button></div><div class="fx-grid"><div class="fx-controls"></div></div>`;
+    card.innerHTML = `<div class="fx-head"><span class="fx-name">${label}</span><button type="button" class="fx-remove" aria-label="remove ${label}" title="remove">×</button></div><div class="fx-grid"><div class="fx-controls"></div></div>`;
     card.querySelector(".fx-remove").addEventListener("click", () => {
       if (n === "band") setRender("outline", 0);
-      else setEffect(n, false);
+      else removeEffect(i);
       fxChanged();
     });
     const controls = card.querySelector(".fx-controls");
@@ -416,12 +424,12 @@ function buildEffects(list) {
       light.title = "where the light comes from";
       light.innerHTML = `<input aria-label="${n} light" type="range" min="0" max="355" step="5" /><span class="fx-light-label">light <output></output></span>`;
       const [input, out] = [light.querySelector("input"), light.querySelector("output")];
-      const get = () => effectOpts(n)?.angle ?? 225;
+      const get = () => effectList()[i]?.[1].angle ?? 225;
       input.value = String(get());
       card.querySelector(".fx-grid").append(light);
       const d = dial(input);
       input.addEventListener("input", () => {
-        setEffectOpts(n, { angle: Number(input.value) });
+        setEffectOpts(i, { angle: Number(input.value) });
         out.textContent = String(input.value).padStart(3, "0");
         writeCode();
         schedule();
@@ -436,13 +444,23 @@ function buildEffects(list) {
   }
 }
 function syncEffects() {
-  const list = FX_ORDER.filter(fxOn);
-  if (list.join() !== fxShown) {
-    fxShown = list.join();
-    buildEffects(list);
+  // Several of a kind are numbered: shine, shine 2.
+  const seen = {};
+  const items = effectList().flatMap(([n], i) => {
+    if (!FX[n]) return []; // a custom effect from the code panel: no card
+    seen[n] = (seen[n] ?? 0) + 1;
+    return [[n, i]];
+  });
+  const count = { ...seen }, nth = {};
+  const named = items.map(([n, i]) => [n, i, count[n] > 1 ? `${n} ${(nth[n] = (nth[n] ?? 0) + 1)}` : n]);
+  if (renderValue("outline")) named.push(["band", null, "band"]);
+  const key = named.map(([, , label]) => label).join();
+  if (key !== fxShown) {
+    fxShown = key;
+    buildEffects(named);
   }
   for (const f of fxSync) f();
-  const free = FX_ORDER.filter((n) => !list.includes(n));
+  const free = ADDABLE.filter((n) => REPEATABLE.includes(n) || !named.some(([m]) => m === n));
   $("fxAdd").innerHTML = `<option value="">${free.length ? "choose…" : "all added"}</option>` + free.map((n) => `<option value="${n}">${n}</option>`).join("");
   $("fxAdd").value = "";
   $("fxAdd").disabled = !free.length;
@@ -451,7 +469,7 @@ $("fxAdd").addEventListener("change", () => {
   const n = $("fxAdd").value;
   if (!n) return;
   if (n === "band") setRender("outline", bandBase());
-  else setEffect(n, true);
+  else addEffect(n);
   fxChanged();
 });
 
