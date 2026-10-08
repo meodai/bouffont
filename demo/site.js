@@ -125,6 +125,21 @@ function presetList() {
     h3.className = 'preset-name pending';
     h3.dataset.preset = name;
     h3.textContent = name;
+    // Clicking a preset's name picks it in the settings (the playground and titles follow).
+    h3.tabIndex = 0;
+    h3.setAttribute('role', 'button');
+    h3.title = `use ${name}`;
+    const pick = () => {
+      const select = document.getElementById('preset');
+      select.value = name;
+      select.dispatchEvent(new Event('change'));
+    };
+    h3.addEventListener('click', pick);
+    h3.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      pick();
+    });
     const p = document.createElement('p');
     p.textContent = ABOUT[name] ?? '';
     sec.append(h3, p);
@@ -142,16 +157,23 @@ function samples() {
 // Every part is yours: per-letter fills ink up in a wave; hovering pins a letter.
 async function parts() {
   const el = document.querySelector('[data-parts]');
-  const piece = await pool.render({ text: 'bouffont', font: iosevkaUrl, seed: 'puff', preset: 'bubbles' });
+  const piece = await pool.render({ text: 'bouffont', font: iosevkaUrl, seed: 'puff', preset: 'bubbles', effects: [['inline', {}], ['shine', {}]] });
   const { svg, letters } = piece.dom();
   svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'bouffont, letters inking up one after another');
   letters.forEach(({ group, fill, lines }, i) => {
-    for (const part of [fill, lines]) part?.style.setProperty('animation-delay', `${i * 140}ms`);
+    const delay = i * 140;
+    for (const part of [group, fill, lines]) part?.style.setProperty('animation-delay', `${delay}ms`);
+    // The effects: take the letter's movement out, replay it 70 ms later (+ the ink).
+    for (const part of group.querySelectorAll('[data-part="inline"], [data-part="shine"]')) {
+      part.style.setProperty('animation-delay', `${delay}ms, ${delay + 70}ms, ${delay}ms`);
+    }
     group.addEventListener('pointerenter', () => group.classList.toggle('inked'));
   });
   el.replaceChildren(svg);
+  // The jump: 12% of each letter's height, as a length (its effects move half of it).
+  for (const { group } of letters) group.style.setProperty('--lift', `${group.getBBox().height * 0.12}px`);
 }
 
 // Words in the text are controls: they set the playground's settings (so the
@@ -222,7 +244,7 @@ function toggles() {
 async function generations() {
   const el = document.querySelector('[data-generations]');
   const steps = [0, 0.5, 1];
-  const pieces = await Promise.all(steps.map((overgrow) => grow({ text: 'grow', font: iosevkaUrl, preset: 'block', overgrow })));
+  const pieces = await Promise.all(steps.map((overgrow) => grow({ text: 'grow', font: iosevkaUrl, preset: 'coral', overgrow })));
   el.append(...pieces.map((markup, i) => figure(markup, `keep growing ${steps[i]}`)));
 }
 

@@ -230,6 +230,16 @@ figcaption {
 .presets section {
   margin-top: 3vmin;
 }
+/* Each preset's name hangs out halfway towards the titles (not as far: they are not
+   titles); clicking it picks the preset. */
+.presets h3.preset-name {
+  margin-left: -3.5vw;
+  cursor: pointer;
+}
+.presets h3.preset-name:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
 .presets p {
   margin: 0.25rem 0 0;
 }
@@ -392,47 +402,176 @@ figcaption {
 }
 .parts [data-part="letter"] {
   cursor: pointer;
+  /* --lift: the jump, 12% of the letter's height (set per letter in site.js) */
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: hop 2.8s ease-in-out infinite;
 }
-/* Each fill inks up in turn (delays set per letter in site.js); lines turn white on black. */
+/* The effects follow the letter's jump a little late (delays set in site.js). */
+.parts :is([data-part="shine"], [data-part="inline"]) {
+  animation: hop-unmove 2.8s ease-in-out infinite, hop-move 2.8s ease-in-out infinite;
+  animation-composition: add, add;
+}
+.parts [data-part="inline"] {
+  animation: hop-unmove 2.8s ease-in-out infinite, hop-move 2.8s ease-in-out infinite, ink-lines 2.8s steps(1, end) infinite;
+  animation-composition: add, add, replace;
+}
+/* Each letter inks up in turn (delays set per letter in site.js): the colours switch at
+   once, on and off; only the letter's little hop is eased. Lines turn white on black. */
 .parts [data-part="fill"] {
-  animation: ink 2.8s ease-in-out infinite;
+  animation: ink 2.8s steps(1, end) infinite;
 }
 .parts [data-part="lines"] {
-  animation: ink-lines 2.8s ease-in-out infinite;
+  animation: ink-lines 2.8s steps(1, end) infinite;
+}
+.parts .inked {
+  animation: none;
+  translate: 0 calc(-1 * var(--lift));
+}
+.parts .inked :is([data-part="shine"], [data-part="inline"]) {
+  animation: none;
+  translate: 0 0;
 }
 .parts .inked [data-part="fill"] {
   animation: none;
   fill: var(--ink);
 }
+.parts .inked [data-part="inline"],
 .parts .inked [data-part="lines"] {
   animation: none;
   stroke: var(--paper);
 }
 @keyframes ink {
-  0%,
-  55%,
+  0% {
+    fill: var(--paper);
+  }
+  20% {
+    fill: var(--ink);
+  }
+  40%,
   100% {
     fill: var(--paper);
   }
-  20%,
-  35% {
-    fill: var(--ink);
-  }
 }
 @keyframes ink-lines {
-  0%,
-  55%,
+  0% {
+    stroke: var(--ink);
+  }
+  20% {
+    stroke: var(--paper);
+  }
+  40%,
   100% {
     stroke: var(--ink);
   }
-  20%,
+}
+/* Up while inked, back down after, cartoon style: crouch (squash), jump (stretch), fly a
+   little past the top and settle; fall (stretch), land flat (squash), a small rebound.
+   It scales from its bottom edge. --lift is the jump's height. */
+@keyframes hop {
+  0%,
+  9% {
+    translate: 0 0;
+    scale: 1 1;
+  }
+  13% {
+    translate: 0 0;
+    scale: 1.1 0.86;
+  }
+  18% {
+    translate: 0 calc(-1.35 * var(--lift));
+    scale: 0.92 1.12;
+  }
+  23% {
+    translate: 0 calc(-0.92 * var(--lift));
+    scale: 1.03 0.97;
+  }
+  27%,
   35% {
-    stroke: var(--paper);
+    translate: 0 calc(-1 * var(--lift));
+    scale: 1 1;
+  }
+  41% {
+    translate: 0 0;
+    scale: 0.92 1.1;
+  }
+  44% {
+    translate: 0 0;
+    scale: 1.14 0.82;
+  }
+  48% {
+    translate: 0 calc(-0.3 * var(--lift));
+    scale: 0.97 1.04;
+  }
+  52%,
+  100% {
+    translate: 0 0;
+    scale: 1 1;
+  }
+}
+/* The effects follow their letter a moment late (follow-through): on top of the
+   letter's movement, one animation takes it back out and a second replays it a little
+   later; animation-composition adds the two up. */
+@keyframes hop-move {
+  0%,
+  13% {
+    translate: 0 0;
+  }
+  18% {
+    translate: 0 calc(-1.35 * var(--lift));
+  }
+  23% {
+    translate: 0 calc(-0.92 * var(--lift));
+  }
+  27%,
+  35% {
+    translate: 0 calc(-1 * var(--lift));
+  }
+  41%,
+  44% {
+    translate: 0 0;
+  }
+  48% {
+    translate: 0 calc(-0.3 * var(--lift));
+  }
+  52%,
+  100% {
+    translate: 0 0;
+  }
+}
+@keyframes hop-unmove {
+  0%,
+  13% {
+    translate: 0 0;
+  }
+  18% {
+    translate: 0 calc(1.35 * var(--lift));
+  }
+  23% {
+    translate: 0 calc(0.92 * var(--lift));
+  }
+  27%,
+  35% {
+    translate: 0 calc(1 * var(--lift));
+  }
+  41%,
+  44% {
+    translate: 0 0;
+  }
+  48% {
+    translate: 0 calc(0.3 * var(--lift));
+  }
+  52%,
+  100% {
+    translate: 0 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .parts [data-part="letter"],
   .parts [data-part="fill"],
-  .parts [data-part="lines"] {
+  .parts [data-part="lines"],
+  .parts [data-part="inline"],
+  .parts [data-part="shine"] {
     animation: none;
   }
 }
@@ -451,6 +590,9 @@ figcaption {
   .page ul,
   .page pre.code,
   .presets {
+    margin-left: 0;
+  }
+  .presets h3.preset-name {
     margin-left: 0;
   }
   .page h1 {
