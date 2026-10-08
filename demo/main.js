@@ -633,6 +633,8 @@ const schedule = () => {
 // The same settings drive the titles on the page (site.js listens).
 function broadcast() {
   const { text, ...options } = effective();
+  // The full settings on every change, ready to copy (temporary, for sharing settings).
+  console.log(JSON.stringify({ font: fontName, preset: presetName, text, ...options }, null, 2));
   window.dispatchEvent(
     new CustomEvent("bouffont:settings", {
       detail: { options, fontUrl: fonts[fontName].url },

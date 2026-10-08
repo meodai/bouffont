@@ -123,6 +123,8 @@ const ABOUT = {
   block: 'A square pen, heavy blocks with cut corners, filling a rectangle.',
   simple: 'Edges at 0, 45 and 90 degrees only.',
   crowd: 'The font’s own outlines, swollen, packed tight and split into shared seams.',
+  candy: 'Glossy and chubby: swollen, smoothed, packed tight, with depth, inline and shine.',
+  marquee: 'An arched sign: knitted, pressed into seams, with an inline and a shine.',
   coral: 'Differential line growth: the outline wrinkles as it grows.',
   frost: 'Diffusion-limited aggregation: particles freeze onto the letters.',
 };

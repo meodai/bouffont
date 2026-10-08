@@ -79,6 +79,39 @@ export const presets = {
     render: { mode: 'stack', stroke: 0.18 },
   },
 
+  // Glossy and chubby: the font's own outlines swollen, smoothed hard and packed into
+  // each other, with a 3D side, an inline and a shine (best with a wide font: Unbounded).
+  candy: {
+    structure: false,
+    lineHeight: 0.65,
+    repel: true,
+    overgrow: 1,
+    smooth: 1.2,
+    strategies: [
+      ['bounce', { y: 0.3, rotate: 4, scale: 0.04 }],
+      ['inflate', { amount: 0.5, smooth: 0.15, keep: 0.25 }],
+    ],
+    effects: [['depth', { angle: 225 }], ['inline', {}], ['shine', { angle: 225 }]],
+    render: { mode: 'stack', stroke: 0.18, fair: 1, curves: 0.5 },
+  },
+
+  // A sign: the swell in an arch, letters knitted and pressed into shared seams, with an
+  // inline and a shine from the top right (best with capitals: Aboreto).
+  marquee: {
+    structure: pen,
+    envelope: { type: 'arch' },
+    lineHeight: 0.7,
+    repel: true,
+    knit: 0.25,
+    overgrow: 0.6,
+    strategies: [
+      ['bounce', { y: 0.3, rotate: 4, scale: 0.04 }],
+      ['inflate', { amount: 0.5, smooth: 0.15, keep: 0.25 }],
+    ],
+    effects: [['inline', {}], ['shine', { angle: 320 }]],
+    render: { mode: 'stack', stroke: 0.18 },
+  },
+
   // Simulations (after nshelton.github.io/home/growth). Slower: seconds, not ms.
 
   // Differential line growth: the outline wrinkles as it grows, like coral.
