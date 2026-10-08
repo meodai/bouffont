@@ -145,8 +145,11 @@ export function render(letters, opts = {}, ctx) {
   const sw = Math.max(0, o.stroke * ctx.stem);
   // Sampling step along lines: never 0, even with a hairline or no stroke.
   const step = Math.max(sw, ctx.stem * 0.05);
-  const tolerance = o.curves * ctx.stem;
-  const fair = o.fair * ctx.stem;
+  // A draft (frames of live growth) is fills and outlines only: straight segments, no
+  // inner or gap lines.
+  const draft = !!o.draft;
+  const tolerance = draft ? 0 : o.curves * ctx.stem;
+  const fair = draft ? 0 : o.fair * ctx.stem;
   const corner = (o.corners * Math.PI) / 180;
   const pathData = (shape) => {
     if (tolerance) return shapeToCurveData(shape, { tolerance, smooth: fair, corner });
@@ -163,7 +166,7 @@ export function render(letters, opts = {}, ctx) {
   const fillStyle = `fill="${paper}" fill-rule="evenodd"`;
   const outlineStyle = `fill="none" stroke="${ink}" stroke-width="${round(sw)}" stroke-linejoin="round"`;
   const fillAndOutline = (d) => `<path data-part="fill" d="${d}" ${fillStyle}/><path data-part="outline" d="${d}" ${outlineStyle}/>`;
-  const inkR = o.ink * ctx.stem;
+  const inkR = draft ? 0 : o.ink * ctx.stem;
   // A letter: its fill and outline, then the narrow gaps (one line each, or solid
   // ink), then its inner lines on top (clipped to the letter).
   const lines0 = { angles: null, cap: 'round', ...(o.lines ?? {}) };
@@ -171,7 +174,7 @@ export function render(letters, opts = {}, ctx) {
   // Inner lines of structured letters, from the final shape: where the swell from two
   // parts of the letter's centre lines meets across a gap.
   const innerOf = (l) => {
-    if (!o.inner || !l.structure?.length || !l.shape.length) return [];
+    if (draft || !o.inner || !l.structure?.length || !l.shape.length) return [];
     return meetLines(l.structure, l.core ?? l.shape, l.shape, {
       keep: sw, cell: ctx.stem / 5, minLength: o.inner * ctx.stem,
     });
@@ -193,13 +196,18 @@ export function render(letters, opts = {}, ctx) {
     // Inner lines (polylines) are drawn with the same pen. Drop the ones that would
     // double a line already there: mostly on a gap line, or mostly running along the
     // outline (near the edge for most of their length).
-    const inside = offset(body, -sw * 1.2);
-    const nearGap = gaps.length ? offset(gaps, sw * 2) : [];
+    // Built only when there are inner lines to test.
+    let inside, nearGap;
+    const regions = () => {
+      inside ??= offset(body, -sw * 1.2);
+      nearGap ??= gaps.length ? offset(gaps, sw * 2) : [];
+    };
     // A line crossing a neck (a G's mouth) touches the edge only at its ends; one
     // doubling an outline stays near it all along, so only the middle half is tested.
     const keepLine = (pts) => {
       const mid = pts.slice(Math.floor(pts.length * 0.25), Math.ceil(pts.length * 0.75));
       if (!mid.length) return true;
+      regions();
       let edge = 0, gap = 0;
       for (const p of mid) {
         if (!contains(inside, p)) edge++;

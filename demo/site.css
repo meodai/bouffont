@@ -568,6 +568,36 @@ figcaption {
   letter-spacing: 0.04em;
   font-weight: 700;
 }
+.settings .btn-play {
+  all: unset;
+  flex: none;
+  position: relative;
+  width: 1.4em;
+  height: 1.4em;
+  cursor: pointer;
+}
+/* Play: a triangle; playing: two bars (pause). */
+.settings .btn-play::before {
+  content: "";
+  position: absolute;
+  left: 0.3em;
+  top: 0.2em;
+  border-style: solid;
+  border-width: 0.5em 0 0.5em 0.85em;
+  border-color: transparent transparent transparent currentColor;
+}
+.settings .btn-play.playing::before {
+  left: 0.3em;
+  width: 0.25em;
+  height: 1em;
+  border: 0;
+  background: currentColor;
+  box-shadow: 0.45em 0 0 currentColor;
+}
+.settings .btn-play:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
 .settings .btn-shuffle {
   all: unset;
   cursor: pointer;

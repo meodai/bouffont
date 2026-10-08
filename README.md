@@ -34,6 +34,40 @@ import { readFile } from 'node:fs/promises';
 const font = await loadFont(await readFile('inter.woff')); // a Buffer works
 ```
 
+### Growing frame by frame
+
+`bouffontLive(options)` (also `bouffont.live`) takes the same options and grows the
+piece one step at a time: simulations (`grow`, `coral`, `dla`) step by step, swells
+(`inflate`, `block`, `pack`, `overgrow`) in a few in-between frames, everything else at
+once.
+
+```js
+import { bouffontLive } from 'bouffont';
+
+const live = bouffontLive({ text: 'hi', font, preset: 'coral' });
+(function frame() {
+  if (live.step()) {
+    el.innerHTML = live.svg; // the current state, drawn with the render settings
+    requestAnimationFrame(frame);
+  } else {
+    el.innerHTML = live.final().svg; // the finished piece, exactly what bouffont() gives
+  }
+})();
+```
+
+- `step()` advances one step and returns `false` once the growth is complete.
+- `svg` draws the current state with the piece's `render` settings (for a quicker
+  drawing, pass `render: { draft: true }`: fills and outlines only); `letters` holds
+  the mid-growth shapes.
+- `final()` finishes the growth (from any point) and returns the piece.
+- `knit` and `repel` normally run last; frames get them too, so seams show from the
+  first frame on (only in the drawing: the growth itself is unchanged).
+- `frame()` returns the current state as plain data, and `drawFrame(frame)` draws it.
+  Frames are independent, so a recording can be drawn in parallel in the worker pool:
+  `pool.draw(live.frame())` resolves to `{ svg, ms }`.
+- A step plus its drawing takes 10–50 ms (two lines of text; `render.ink: 0`, no gap
+  lines, roughly halves it), so frames are best recorded once and played back.
+
 ### In a worker
 
 A piece takes roughly 15–500 ms depending on the preset and `repel`. To keep the

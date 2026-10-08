@@ -3,8 +3,9 @@
 import { offset, open } from '../geom/clip.js';
 import { constrain } from './constrain.js';
 import { keepFeatures, withFeatures } from './shape.js';
+import { stepwise } from './steps.js';
 
-export function grow(letters, ctx, {
+function* growSteps(letters, ctx, {
   amount = 1, steps = 6, join = 'round', neighbors = 'avoid', gap = 0, clip = false, smooth = 0.3, keep = 0.12,
 } = {}) {
   const delta = (amount * ctx.stem) / steps;
@@ -13,6 +14,7 @@ export function grow(letters, ctx, {
     const next = current.map((l, k) =>
       ctx.targets?.[k] === false ? l : { ...l, shape: offset(l.shape, delta * (l.growth ?? 1), { join, miterLimit: 4 }) });
     current = constrain(next, current, ctx, { neighbors, gap, clip });
+    yield current;
   }
   if (smooth) {
     // Remove slivers left where growth fronts met.
@@ -20,4 +22,5 @@ export function grow(letters, ctx, {
   }
   return current.map((l, k) => withFeatures(l, keepFeatures(letters[k].shape, l.shape, ctx, amount + smooth, keep, l)));
 }
-grow.selfConstrained = true;
+
+export const grow = stepwise(growSteps, { selfConstrained: true });

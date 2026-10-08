@@ -1,4 +1,4 @@
-import { presets, envelopes, geom } from "../src/index.js";
+import { bouffontLive, loadFont, presets, envelopes, geom } from "../src/index.js";
 import { pool } from "./pool.js";
 import iosevkaUrl from "./fonts/iosevka-400-normal.woff?url";
 import { highlightCode } from "./highlight.js";
@@ -63,7 +63,7 @@ const DEFAULTS = {
   smooth: 0,
   tracking: 0,
 };
-const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0 };
+const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0, ink: 0.3 };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const asObj = (v) => (v && typeof v === "object" ? v : {});
 
@@ -264,6 +264,7 @@ function syncControls() {
   $("align").value = value("align");
   $("repel").value = value("repel") ? "on" : "off";
   $("knit").value = value("knit") ? "0.25" : "0";
+  $("gaps").value = renderValue("ink") ? "on" : "off";
   $("order").value = renderValue("order");
   $("structure").value = skeletonOn() ? "on" : "off";
   $("follow").disabled = !skeletonOn();
@@ -321,6 +322,10 @@ function fromControl(id) {
       break;
     case "knit":
       set("knit", Number(v));
+      break;
+    // Gap lines: narrow gaps drawn as one line (the preset's ink), or left open (ink 0).
+    case "gaps":
+      setRender("ink", v === "on" ? (asObj(recipe.render).ink ?? RENDER_DEFAULTS.ink) : 0);
       break;
     case "order":
       setRender("order", v);
@@ -397,8 +402,111 @@ async function draw() {
   }
 }
 
+// ── Timeline ─────────────────────────────────────────────────────────────────────
+// Play grows the piece frame by frame (bouffontLive) and records the frames; after
+// that they play back, looping or back and forth. Any change of settings starts over.
+const FPS = 30, HOLD = 600; // playback speed; pause at the ends (ms)
+const fontObjects = {};
+const fontObject = (name) => (fontObjects[name] ??= loadFont(fonts[name].url));
+const tl = { frames: [], live: null, i: 0, dir: 1, playing: false, holdUntil: 0, lastTick: 0, run: 0, waiting: 0 };
+// Frames that are drawn so far, in order (the pool may finish them out of order).
+const readyFrames = () => {
+  const k = tl.frames.indexOf(null);
+  return k === -1 ? tl.frames.length : k;
+};
+
+function showFrame(i) {
+  if (tl.frames[i] == null) return;
+  tl.i = i;
+  last = tl.frames[i];
+  $("stage").innerHTML = last;
+  syncTimeline();
+}
+function syncTimeline() {
+  const n = tl.frames.length, growing = (tl.live && !tl.live.done) || tl.waiting > 0;
+  $("frame").max = String(Math.max(0, n - 1));
+  $("frame").value = String(tl.i);
+  $("frameOut").textContent = n ? `${tl.i + 1}/${n}${growing ? "…" : ""}` : "";
+}
+function setPlaying(on) {
+  tl.playing = on;
+  $("play").classList.toggle("playing", on);
+  $("play").setAttribute("aria-label", on ? "pause" : "play the growth");
+  if (on) requestAnimationFrame(playLoop);
+}
+function resetTimeline() {
+  tl.run++;
+  tl.frames = [];
+  tl.live = null;
+  tl.i = 0;
+  tl.dir = 1;
+  tl.waiting = 0;
+  setPlaying(false);
+  syncTimeline();
+}
+function playLoop(now) {
+  if (!tl.playing) return;
+  if (tl.live && !tl.live.done) {
+    // Still growing: one step per screen frame. Each frame is drawn in the worker pool
+    // (repel and all, several at once) and recorded as it comes back.
+    if (tl.live.step()) {
+      const i = tl.frames.length, run = tl.run;
+      tl.frames.push(null);
+      tl.waiting++;
+      pool.draw(tl.live.frame()).then(({ svg }) => {
+        if (run !== tl.run) return;
+        tl.frames[i] = svg;
+        tl.waiting--;
+        showFrame(readyFrames() - 1);
+        if (!tl.waiting && tl.live.done) tl.holdUntil = performance.now() + HOLD;
+      }, () => {});
+    } else {
+      tl.frames.push(tl.live.final().svg); // the exact piece closes the timeline
+      if (!tl.waiting) {
+        showFrame(tl.frames.length - 1);
+        tl.holdUntil = now + HOLD;
+      }
+    }
+    syncTimeline();
+  } else if (!tl.waiting && now >= tl.holdUntil && now - tl.lastTick >= 1000 / FPS && tl.frames.length > 1) {
+    // Playing back the recording.
+    tl.lastTick = now;
+    const n = tl.frames.length, zigzag = $("playMode").value === "zigzag";
+    let i = tl.i + tl.dir;
+    if (i > n - 1 || i < 0) {
+      if (zigzag) tl.dir = -tl.dir;
+      i = zigzag ? tl.i + tl.dir : 0;
+    }
+    showFrame(i);
+    if (i === n - 1 || (zigzag && i === 0)) tl.holdUntil = now + HOLD;
+  }
+  requestAnimationFrame(playLoop);
+}
+$("play").addEventListener("click", async () => {
+  if (tl.playing) return setPlaying(false);
+  if (!tl.live) {
+    const run = tl.run;
+    const font = await fontObject(fontName);
+    if (run !== tl.run) return; // the settings changed meanwhile
+    try {
+      tl.live = bouffontLive({ ...effective(), font });
+    } catch (e) {
+      $("status").textContent = e.message;
+      return;
+    }
+  } else if (tl.live.done && $("playMode").value === "loop" && tl.i === tl.frames.length - 1) {
+    showFrame(0); // play again from the start
+  }
+  setPlaying(true);
+});
+$("frame").addEventListener("input", () => {
+  setPlaying(false);
+  if (tl.frames.length) showFrame(Number($("frame").value));
+});
+
 let pending;
 const schedule = () => {
+  resetTimeline();
   cancelAnimationFrame(pending);
   pending = requestAnimationFrame(draw);
   broadcast();
@@ -424,6 +532,7 @@ for (const id of [
   "repel",
   "order",
   "knit",
+  "gaps",
   "structure",
 ])
   $(id).addEventListener("change", () => fromControl(id));

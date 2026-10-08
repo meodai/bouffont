@@ -5,19 +5,20 @@ import { difference, normalize, offset, signedArea, union } from '../geom/clip.j
 import { resample, vertexNormals } from '../geom/path.js';
 import { blur, contour, makeGrid, rasterize } from '../geom/raster.js';
 import { scanFill } from '../geom/grid.js';
+import { stepwise } from './steps.js';
 
-// ── Differential line growth ─────────────────────────────────────────────────────
-// Every outline becomes a chain of nodes: neighbours pull together (smooth), nearby
-// nodes push apart (no self-overlap), edges split when long, and every node creeps
-// outward. The line has to fold to fit: coral-like, wrinkled letters.
-export function coral(letters, ctx, {
+function* coralSteps(letters, ctx, {
   steps = 110, spacing = 0.18, repel = 0.6, attract = 0.4, push = 0.035, jitter = 0.02, maxNodes = 1600,
   reach = 1.1, // never further than this from the letter's pen drawing
   from = 'core', // 'shape': measure reach from the current shape (more generations)
 } = {}) {
   const stem = ctx.stem;
   const d = spacing * stem, R = repel * stem, R2 = R * R;
-  return letters.map((letter) => {
+  // Every letter grows at the same time (one step each per frame), each from its own
+  // random stream, so the letters don't depend on each other or on the stepping.
+  const sims = letters.map((letter, k) => {
+    if (!letter.shape.length) return null;
+    const rng = ctx.rng.fork(`letter:${k}`);
     // Only the outer outline grows; counters stay as they are.
     const largest = letter.shape.reduce((a, b) => (Math.abs(signedArea(b)) > Math.abs(signedArea(a)) ? b : a));
     const sign = Math.sign(signedArea(largest));
@@ -38,7 +39,7 @@ export function coral(letters, ctx, {
     const hcell = (p) => hy(p) * hcols + hx(p);
     let rings = letter.shape.filter((r) => Math.sign(signedArea(r)) === sign)
       .map((ring) => resample(ring, d).map((p) => ({ x: p.x, y: p.y })));
-    for (let it = 0; it < steps; it++) {
+    const step = () => {
       // All nodes of this letter, bucketed into cells of size R (a counting sort into
       // flat arrays; nodes never leave the limit, so the grid never grows).
       let total = 0;
@@ -78,8 +79,8 @@ export function coral(letters, ctx, {
               }
             }
           }
-          fx += normals[i].x * push * stem + ctx.rng.range(-jitter, jitter) * stem;
-          fy += normals[i].y * push * stem + ctx.rng.range(-jitter, jitter) * stem;
+          fx += normals[i].x * push * stem + rng.range(-jitter, jitter) * stem;
+          fy += normals[i].y * push * stem + rng.range(-jitter, jitter) * stem;
           const moved = { x: p.x + fx, y: p.y + fy };
           // Nodes stop at the reach limit instead of being cut off later.
           return insideLimit(moved) ? moved : p;
@@ -94,23 +95,40 @@ export function coral(letters, ctx, {
         }
         return split;
       });
-    }
-    // Folds leave little enclosed pockets: fill them, only real counters stay open.
-    const n0 = normalize(rings);
-    const big = n0.length ? n0.reduce((a, b) => (Math.abs(signedArea(b)) > Math.abs(signedArea(a)) ? b : a)) : null;
-    const grown = big ? union(n0.filter((r) => Math.sign(signedArea(r)) === Math.sign(signedArea(big)))) : n0;
-    return { ...letter, shape: holes.length ? difference(grown, normalize(holes.map((h) => [...h].reverse()))) : grown };
+    };
+    // A frame: the raw outline as it grows (no clean-up), with the counters.
+    const draft = () => ({ ...letter, shape: [...rings, ...holes] });
+    const finish = () => {
+      // Folds leave little enclosed pockets: fill them, only real counters stay open.
+      const n0 = normalize(rings);
+      const big = n0.length ? n0.reduce((a, b) => (Math.abs(signedArea(b)) > Math.abs(signedArea(a)) ? b : a)) : null;
+      const grown = big ? union(n0.filter((r) => Math.sign(signedArea(r)) === Math.sign(signedArea(big)))) : n0;
+      return { ...letter, shape: holes.length ? difference(grown, normalize(holes.map((h) => [...h].reverse()))) : grown };
+    };
+    return { step, draft, finish };
   });
+  for (let it = 0; it < steps; it++) {
+    for (const sim of sims) sim?.step();
+    yield sims.map((sim, k) => sim?.draft() ?? letters[k]);
+  }
+  return sims.map((sim, k) => sim?.finish() ?? letters[k]);
 }
 
-// ── Diffusion-limited aggregation ────────────────────────────────────────────────
-// Walkers wander at random and stick when they touch the letter: branching, frosty
-// growth. `crystal` > 0 only lets them stick along `arms` directions: dendrites.
-export function dla(letters, ctx, {
+// ── Differential line growth ─────────────────────────────────────────────────────
+// Every outline becomes a chain of nodes: neighbours pull together (smooth), nearby
+// nodes push apart (no self-overlap), edges split when long, and every node creeps
+// outward. The line has to fold to fit: coral-like, wrinkled letters.
+export const coral = stepwise(coralSteps);
+
+function* dlaSteps(letters, ctx, {
   reach = 1.6, cell = 0.18, particles = 1.2, stick = 0.9, crystal = 0, arms = 6, walk = 1500, smooth = 1,
+  frames = 40, // live growth: the walkers are released over this many steps
 } = {}) {
   const stem = ctx.stem;
-  return letters.map((letter) => {
+  // Every letter grows at the same time, each from its own random stream.
+  const sims = letters.map((letter, k) => {
+    if (!letter.shape.length) return null;
+    const rng = ctx.rng.fork(`letter:${k}`);
     const g = rasterize(makeGrid(letter.shape, cell * stem, reach * stem), letter.shape);
     const { cols, rows, data } = g;
     const filled = (i, j) => i >= 0 && j >= 0 && i < cols && j < rows && data[j * cols + i] > 0.5;
@@ -120,30 +138,45 @@ export function dla(letters, ctx, {
     const total = Math.round(edge * particles * 4);
     const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const armAngle = (Math.PI * 2) / arms;
-    let stuck = 0;
-    for (let n = 0; n < total * 3 && stuck < total; n++) {
-      // Spawn on an empty cell near the cluster.
-      let i = ctx.rng.int(0, cols - 1), j = ctx.rng.int(0, rows - 1);
-      if (filled(i, j)) continue;
-      for (let s = 0; s < walk; s++) {
-        const [di, dj] = N4[Math.floor(ctx.rng() * 4)];
-        const ni = i + di, nj = j + dj;
-        if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) break;
-        if (filled(ni, nj)) {
-          let ok = ctx.rng() < stick;
-          if (ok && crystal) {
-            // Direction from the cell it touches: only near one of the arms.
-            const a = Math.atan2(j - nj, i - ni);
-            const off = Math.abs(((a % armAngle) + armAngle) % armAngle - armAngle / 2);
-            ok = ctx.rng() < 1 - crystal * (1 - off / (armAngle / 2));
+    const tries = total * 3, perStep = Math.ceil(tries / frames);
+    let stuck = 0, n = 0;
+    const step = () => {
+      for (const until = Math.min(tries, n + perStep); n < until && stuck < total; n++) {
+        // Spawn on an empty cell near the cluster.
+        let i = rng.int(0, cols - 1), j = rng.int(0, rows - 1);
+        if (filled(i, j)) continue;
+        for (let s = 0; s < walk; s++) {
+          const [di, dj] = N4[Math.floor(rng() * 4)];
+          const ni = i + di, nj = j + dj;
+          if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) break;
+          if (filled(ni, nj)) {
+            let ok = rng() < stick;
+            if (ok && crystal) {
+              // Direction from the cell it touches: only near one of the arms.
+              const a = Math.atan2(j - nj, i - ni);
+              const off = Math.abs(((a % armAngle) + armAngle) % armAngle - armAngle / 2);
+              ok = rng() < 1 - crystal * (1 - off / (armAngle / 2));
+            }
+            if (ok) { data[j * cols + i] = 1; stuck++; }
+            break;
           }
-          if (ok) { data[j * cols + i] = 1; stuck++; }
-          break;
+          i = ni; j = nj;
         }
-        i = ni; j = nj;
       }
-    }
-    const shape = contour(blur(g, smooth), 0.5);
-    return { ...letter, shape: union(shape, letter.shape) };
+    };
+    // A frame: the grid traced as it is, without the final smoothing.
+    const draft = () => ({ ...letter, shape: contour(g, 0.5) });
+    const finish = () => ({ ...letter, shape: union(contour(blur(g, smooth), 0.5), letter.shape) });
+    return { step, draft, finish };
   });
+  for (let f = 0; f < frames; f++) {
+    for (const sim of sims) sim?.step();
+    yield sims.map((sim, k) => sim?.draft() ?? letters[k]);
+  }
+  return sims.map((sim, k) => sim?.finish() ?? letters[k]);
 }
+
+// ── Diffusion-limited aggregation ────────────────────────────────────────────────
+// Walkers wander at random and stick when they touch the letter: branching, frosty
+// growth. `crystal` > 0 only lets them stick along `arms` directions: dendrites.
+export const dla = stepwise(dlaSteps);

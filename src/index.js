@@ -4,7 +4,7 @@ import { applyEnvelope } from './envelope.js';
 import { applyStructure } from './structure.js';
 import { balanceDensity } from './density.js';
 import { alignBarrier } from './align.js';
-import { runStrategies } from './strategies/index.js';
+import { runStrategies, stepStrategies, strategies } from './strategies/index.js';
 import { runDecorations } from './decorations.js';
 import { render } from './render.js';
 import { presets } from './presets.js';
@@ -77,6 +77,82 @@ function generations(spec, amount) {
  *                               order: 'ltr' | 'rtl' | 'center' | 'edges' | 'random'
  */
 export function bouffont(o) {
+  const setup = prepare(o);
+  if (setup.empty) return setup.empty;
+  return finish(setup, runStrategies(setup.letters, setup.strategies, setup.ctx));
+}
+
+/**
+ * Grow a piece frame by frame (also `bouffont.live`). Takes the same options as `bouffont()`; the strategies
+ * run one step per `step()` (simulations step by step, other strategies at once), so
+ * the growth can be watched. `final()` gives exactly what `bouffont()` gives.
+ *
+ *   const live = bouffontLive(options);
+ *   (function frame() {
+ *     if (live.step()) { el.innerHTML = live.svg; requestAnimationFrame(frame); }
+ *     else el.innerHTML = live.final().svg;
+ *   })();
+ */
+export function bouffontLive(o) {
+  const setup = prepare(o);
+  let current = setup.empty ? [] : setup.letters, done = !!setup.empty, result = setup.empty ?? null;
+  let svg = null;
+  const steps = setup.empty ? null : stepStrategies(setup.letters, setup.strategies, setup.ctx, { live: true });
+  const advance = () => {
+    const r = steps.next();
+    current = r.value;
+    svg = null;
+    if (r.done) done = true;
+    return !r.done;
+  };
+  return {
+    /** Advance one step; false once the growth is complete. */
+    step: () => (done ? false : advance()),
+    get done() { return done; },
+    /** The current letters (raw, mid-growth shapes). */
+    get letters() { return current; },
+    /** The current state, drawn with the piece's settings (see `drawFrame`). */
+    get svg() {
+      if (setup.empty) return setup.empty.svg;
+      return (svg ??= drawFrame(this.frame()).svg);
+    },
+    /**
+     * The current state as plain data for `drawFrame()`, which can run elsewhere (a
+     * worker: frames are independent, so several can be drawn at once).
+     */
+    frame() {
+      const { stem, metrics, size, structured, details, envelope } = setup.ctx;
+      const { render: look, knit, repel, seed } = setup.opts;
+      // The final letters already went through knit and repel.
+      return { letters: current, render: look, knit: done ? 0 : knit, repel: done ? false : repel,
+        ctx: { stem, metrics, size, structured, details, envelope, seed } };
+    },
+    /** Finish the growth and return the finished piece, the same as `bouffont()`. */
+    final() {
+      while (!done) advance();
+      return (result ??= finish(setup, current));
+    },
+  };
+}
+
+bouffont.live = bouffontLive;
+
+/**
+ * Draw a frame of live growth (from `live.frame()`). `knit` and `repel` normally run
+ * last; mid-growth frames get them for display too, so seams show from the first frame
+ * on (the growth itself is unchanged).
+ */
+export function drawFrame({ letters, render: look, knit, repel, ctx: plain }) {
+  const ctx = { ...plain, rng: createRng(plain.seed) };
+  let out = letters;
+  if (knit) out = strategies.knit(out, ctx, { gap: knit });
+  if (repel) out = strategies.repel(out, ctx, repel === true ? {} : repel);
+  return render(out, look, ctx);
+}
+
+// Everything before the strategies: layout, structure, envelope, density, alignment,
+// and the full list of strategies to run.
+function prepare(o) {
   const base = o.preset ? presets[o.preset] : {};
   if (o.preset && !base) throw new Error(`bouffont: unknown preset "${o.preset}"`);
   const opts = { size: 200, tracking: 0, seed: 1, knit: 0, ...base, ...o, render: { ...base.render, ...o.render } };
@@ -89,10 +165,10 @@ export function bouffont(o) {
     tracking: opts.structure ? 0 : opts.tracking,
     lineHeight: opts.lineHeight ?? 1,
   });
-  const ctx = { stem: metrics.stem, metrics, size: opts.size, rng, envelope: null, font: opts.font };
+  const ctx = { stem: metrics.stem, metrics, size: opts.size, rng, envelope: null };
   if (!laid.length) {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg"/>';
-    return { svg, letters: [], metrics, dom: (doc) => toDOM(svg, doc) };
+    return { empty: { svg, letters: [], metrics, dom: (doc) => toDOM(svg, doc) } };
   }
 
   // Experimental: redraw every letter from its structure with one pen; the pen width
@@ -127,10 +203,13 @@ export function bouffont(o) {
   if (opts.knit) strategies.push(['knit', { gap: opts.knit }]);
   // Repel last: it splits overlaps into seams and smooths those seams itself.
   if (opts.repel) strategies.push(['repel', opts.repel === true ? {} : opts.repel]);
-  const grown = runStrategies(warped, strategies, ctx);
+  return { opts, ctx, letters: warped, strategies, polygon };
+}
+
+// Everything after the strategies: decorations and the drawing.
+function finish({ opts, ctx, polygon }, grown) {
   const decorated = runDecorations(grown, opts.decorations, ctx);
   const out = render(decorated, opts.render, ctx);
-
   return {
     ...out,
     letters: decorated,

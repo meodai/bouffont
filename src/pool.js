@@ -43,7 +43,7 @@ export function createPool({ size } = {}) {
       const worker = idle.pop();
       job.worker = worker;
       jobs.set(job.id, job);
-      worker.postMessage({ id: job.id, options: job.options, letters: job.letters });
+      worker.postMessage(job.frame ? { id: job.id, frame: job.frame } : { id: job.id, options: job.options, letters: job.letters });
     }
   }
 
@@ -64,6 +64,19 @@ export function createPool({ size } = {}) {
           ? new URL(options.font, globalThis.location.href).href // resolve against the page, not the worker
           : options.font;
         const job = { id: nextId++, options: { ...options, font }, signal, letters, resolve, reject };
+        if (priority) queue.unshift(job);
+        else queue.push(job);
+        pump();
+      });
+    },
+    /**
+     * Draw a frame of live growth (from `live.frame()`). Frames are independent, so a
+     * recording draws in parallel. Resolves to { svg, ms }.
+     */
+    draw(frame, { signal, priority = false } = {}) {
+      return new Promise((resolve, reject) => {
+        if (signal?.aborted) return reject(abortError());
+        const job = { id: nextId++, frame, signal, resolve, reject };
         if (priority) queue.unshift(job);
         else queue.push(job);
         pump();

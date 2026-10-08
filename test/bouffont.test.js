@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { bouffont, loadFont, measureFont, layout, geom } from '../src/index.js';
+import { bouffont, bouffontLive, loadFont, measureFont, layout, geom, presets } from '../src/index.js';
 import { runStrategies } from '../src/strategies/index.js';
 import { createRng } from '../src/rng.js';
 import { variableOffset } from '../src/geom/thickness.js';
@@ -13,6 +13,30 @@ const ctxFor = (size = 200) => {
   const { metrics } = layout(font, 'O', { size });
   return { stem: metrics.stem, metrics, size, rng: createRng(1), envelope: null };
 };
+
+describe('live growth', () => {
+  it('ends exactly where bouffont() does, for every preset', () => {
+    for (const preset of Object.keys(presets)) {
+      const opts = { text: 'ab', font, seed: 4, preset };
+      const live = bouffontLive(opts);
+      let frames = 0;
+      while (live.step()) {
+        expect(live.svg).toMatch(/^<svg/);
+        frames++;
+      }
+      expect(frames).toBeGreaterThan(1);
+      expect(live.step()).toBe(false);
+      expect(live.final().svg).toBe(bouffont(opts).svg);
+    }
+  });
+
+  it('can finish at any point', () => {
+    const opts = { text: 'ab', font, seed: 4, preset: 'coral' };
+    const live = bouffontLive(opts);
+    live.step();
+    expect(live.final().svg).toBe(bouffont(opts).svg);
+  });
+});
 
 describe('measureFont', () => {
   it('measures the stem as a sensible fraction of the cap height', () => {
