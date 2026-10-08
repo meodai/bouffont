@@ -297,6 +297,81 @@ figcaption {
   transform: translateY(-70%) rotate(45deg);
   pointer-events: none;
 }
+/* Customizable selects: options with icons (demo/icons.js). The closed field stays a
+   plain word; browsers without support show the classic dropdown, plain names. */
+@supports (appearance: base-select) {
+  .toggle-select select,
+  .toggle-select select::picker(select) {
+    appearance: base-select;
+  }
+  .toggle-select select {
+    min-block-size: 0;
+  }
+  .toggle-select select::picker-icon,
+  .toggle-select option::checkmark,
+  .toggle-select selectedcontent .opt-icon {
+    display: none;
+  }
+  .toggle-select select::picker(select) {
+    margin-block-start: 4px;
+    padding: 0.25rem 0;
+    border: 2px solid var(--ink);
+    border-radius: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    text-decoration: none;
+    box-shadow: none;
+  }
+  .toggle-select option {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 0.2rem 0.75rem;
+    text-decoration: none;
+  }
+  .toggle-select option:checked {
+    font-weight: 700;
+  }
+  .toggle-select option:hover,
+  .toggle-select option:focus-visible {
+    background: var(--bg);
+    outline: 0;
+  }
+  .opt-icon {
+    display: inline-flex;
+    justify-content: center;
+    inline-size: 2.2em;
+  }
+  .opt-icon:empty {
+    display: none;
+  }
+  .opt-icon svg {
+    block-size: 1.3em;
+    inline-size: auto;
+    max-inline-size: 2.2em;
+  }
+  /* Every icon line is drawn at the same width, whatever the icon's own scale. */
+  .opt-icon svg * {
+    vector-effect: non-scaling-stroke;
+  }
+  .opt-icon svg [stroke="currentColor"],
+  .opt-icon svg :is([data-part="outline"], [data-part="lines"]) {
+    stroke-width: 1.25px;
+  }
+  /* The outline band's width is part of the shape: it scales. */
+  .opt-icon svg [data-part="band"] {
+    vector-effect: none;
+  }
+  /* The presets' "a": bigger, so its own line and texture show. */
+  #preset .opt-icon {
+    inline-size: 2.6em;
+  }
+  #preset .opt-icon svg {
+    block-size: 2em;
+    max-inline-size: 2.6em;
+  }
+}
 .toggle-select select:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -693,6 +768,10 @@ figcaption {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+/* Two switches on one row. */
+.field-pair {
+  gap: 1rem;
+}
 .field-wide {
   flex-direction: column;
   align-items: stretch;
@@ -716,6 +795,11 @@ figcaption {
 }
 .settings textarea {
   resize: vertical;
+  border: 0.12em dashed currentColor; /* the text field: a box all around */
+  padding: 4px 6px;
+}
+.settings textarea:focus {
+  border-style: solid;
 }
 .settings select:disabled {
   opacity: 0.35;

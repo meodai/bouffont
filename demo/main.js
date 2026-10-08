@@ -2,6 +2,7 @@ import { bouffontLive, loadFont, presets, envelopes, geom } from "../src/index.j
 import { pool } from "./pool.js";
 import iosevkaUrl from "./fonts/iosevka-400-normal.woff?url";
 import { highlightCode } from "./highlight.js";
+import { alignIcon, envelopeIcon, orderIcon, repeatIcon, richOptions } from "./icons.js";
 
 const files = {
   ...import.meta.glob(
@@ -35,12 +36,31 @@ const fonts = Object.fromEntries(
     .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b)),
 );
 const $ = (id) => document.getElementById(id);
-const fill = (select, names) =>
-  (select.innerHTML = names.map((n) => `<option>${n}</option>`).join(""));
 
-fill($("font"), Object.keys(fonts));
-fill($("preset"), Object.keys(presets));
-fill($("envelope"), ["(preset)", "none", ...Object.keys(envelopes)]);
+// Dropdowns with an icon per option (customizable selects; plain names elsewhere).
+// Fonts are named in their own face; presets show an "a" grown in that preset.
+$("font").innerHTML = richOptions(Object.keys(fonts).map((value) => ({ value, style: `font-family: 'bf ${value}', ui-monospace, monospace` })));
+$("preset").innerHTML = richOptions(Object.keys(presets).map((value) => ({ value })));
+$("envelope").innerHTML = richOptions(["(preset)", "none", ...Object.keys(envelopes)].map((value) => ({ value, icon: envelopeIcon(value) })));
+$("align").innerHTML = richOptions(["middle", "bottom", "top", "both"].map((value) => ({ value, icon: alignIcon(value) })));
+$("order").innerHTML = richOptions(Object.entries({ ltr: "normal", rtl: "reverse", center: "center", edges: "edges", random: "random" })
+  .map(([value, label]) => ({ value, label, icon: orderIcon(value) })));
+$("playMode").innerHTML = richOptions(["zigzag", "loop"].map((value) => ({ value, icon: repeatIcon(value) })));
+// Each font's own face, for its option (loaded when the page is idle).
+(window.requestIdleCallback ?? setTimeout)(() => {
+  for (const [name, { url }] of Object.entries(fonts)) {
+    new FontFace(`bf ${name}`, `url(${url})`).load().then((face) => document.fonts.add(face), () => {});
+  }
+});
+// The preset icons: a small "a" in each preset, grown in the worker pool.
+(window.requestIdleCallback ?? setTimeout)(() => {
+  for (const preset of Object.keys(presets)) {
+    pool.render({ text: "a", preset, seed: "puff", font: fonts[fontName].url }).then(({ svg }) => {
+      const slot = $("preset").querySelector(`option[value="${CSS.escape(preset)}"] .opt-icon`);
+      if (slot) slot.innerHTML = svg;
+    }, () => {});
+  }
+});
 
 // ── State ────────────────────────────────────────────────────────────────────────
 // What the code panel shows: the preset's full recipe (editable, on top) and the
