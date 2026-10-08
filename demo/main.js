@@ -528,9 +528,16 @@ function fromControl(id) {
       overrides.seed = v !== "" && !Number.isNaN(Number(v)) ? Number(v) : v;
       break;
     case "preset":
-      // A new recipe; the choices made in the panel stay.
+      // A new recipe; the choices made in the panel stay, but the effects and the band
+      // are part of a preset's look: they come from the new one.
       presetName = v;
       recipe = structuredClone(presets[v]);
+      delete overrides.effects;
+      if (overrides.render) {
+        delete overrides.render.outline;
+        delete overrides.render.band;
+        if (!Object.keys(overrides.render).length) delete overrides.render;
+      }
       syncControls();
       break;
     case "font":
