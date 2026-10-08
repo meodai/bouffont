@@ -2,7 +2,8 @@
 // returns shapes per letter, `{ part, shape, kind?, layer? }` (data-part = part):
 //   kind  'paper' (default): white with a thin outline · 'ink': solid black ·
 //         'line': an outline only
-//   layer 'over' (default): between the letter's fill and its outline ·
+//   layer 'over' (default): between the letter's fill and its outline · 'top': over the
+//         outline (shine, shade and inline with a negative inset) ·
 //         'under': before the letter's fill, inside its group (stacked with it) ·
 //         'behind': behind every letter (extrusions)
 // Light-based effects take `angle`: where the light comes from, in degrees (225 = top
@@ -56,7 +57,9 @@ export function shine(letter, ctx, { angle = 225, inset = 0.26, width = 0.4, len
   band = intersection(band, [circle(best, length * stem)]);
   // Round it off; drop slivers.
   band = open(band, width * stem * 0.3).filter((r) => Math.abs(signedArea(r)) > (width * stem) ** 2 * 0.5);
-  const out = band.length ? [{ part: 'shine', shape: band }] : [];
+  // A negative inset puts the shine past the edge: it is drawn over the outline.
+  const layer = inset < 0 ? 'top' : undefined;
+  const out = band.length ? [{ part: 'shine', shape: band, layer }] : [];
   if (dot && band.length) {
     // The dot follows the edge: past the end of the streak along the inner outline,
     // nudged inward to sit on the streak's line.
@@ -78,7 +81,7 @@ export function shine(letter, ctx, { angle = 225, inset = 0.26, width = 0.4, len
     const tx = centroid.cx - p.x, ty = centroid.cy - p.y, tl = Math.hypot(tx, ty) || 1;
     const c = { x: p.x + (tx / tl) * width * stem * 0.5, y: p.y + (ty / tl) * width * stem * 0.5 };
     const d = intersection([circle(c, dot * stem)], inner);
-    if (d.length) out.push({ part: 'shine', shape: d });
+    if (d.length) out.push({ part: 'shine', shape: d, layer });
   }
   return out;
 }
@@ -95,10 +98,11 @@ export function shade(letter, ctx, { angle = 225, inset = 0.16, width = 0.7 } = 
   if (!inner.length) return [];
   // The inner shape minus itself moved towards the light: the far side's crescent.
   let band = difference(inner, moveShape(inner, lx * width * stem, ly * width * stem));
-  band = intersection(open(band, width * stem * 0.2), letter.shape)
+  // Inside the letter; with a negative inset, as far past the edge as the inset says.
+  band = intersection(open(band, width * stem * 0.2), inset < 0 ? offset(letter.shape, -inset * stem) : letter.shape)
     .filter((r) => Math.abs(signedArea(r)) > (width * stem) ** 2 * 0.3);
   if (!band.length) return [];
-  return [{ part: 'shade', shape: band, kind: 'ink' }];
+  return [{ part: 'shade', shape: band, kind: 'ink', layer: inset < 0 ? 'top' : undefined }];
 }
 
 /**
@@ -124,7 +128,7 @@ export function depth(letter, ctx, { angle = 225, length = 0.8, fill = 'paper', 
 export function inline(letter, ctx, { inset = 0.3 } = {}) {
   if (!letter.shape.length) return [];
   const ring = offset(letter.shape, -inset * ctx.stem);
-  return ring.length ? [{ part: 'inline', shape: ring, kind: 'line' }] : [];
+  return ring.length ? [{ part: 'inline', shape: ring, kind: 'line', layer: inset < 0 ? 'top' : undefined }] : [];
 }
 
 export const effects = { shine, shade, depth, inline };

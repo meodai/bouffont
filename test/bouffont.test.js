@@ -42,6 +42,11 @@ describe('effects', () => {
     expect(piece.width).toBeGreaterThan(plain.width);
   });
 
+  it('draws effects over the outline with a negative inset', () => {
+    const { svg } = bouffont({ text: 'o', font, seed: 1, preset: 'throwup', effects: [['shine', { inset: -0.3 }]] });
+    expect(svg).toMatch(/data-part="outline"[^>]*\/><path data-part="shine"/);
+  });
+
   it('can give every letter its own depth, stacked with it', () => {
     const piece = bouffont({ text: 'ob', font, seed: 1, preset: 'throwup', effects: [['depth', { merge: false }]] });
     // One side per letter, inside the letter's group, before its fill.

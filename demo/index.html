@@ -146,7 +146,7 @@ bouffont</textarea></label>
           <div class="field field-pair"><span class="toggle" role="switch" tabindex="0" data-control="inline" data-on="on" data-off="off" title="a thin line inside every edge">inline</span><select hidden id="inline"><option value="off">off</option><option value="on">on</option></select><span class="toggle" role="switch" tabindex="0" data-control="perLetter" data-on="on" data-off="off" title="depth: each letter its own side, stacked with it (instead of one block behind all)">per letter</span><select hidden id="perLetter"><option value="off">off</option><option value="on">on</option></select></div>
         </div>
         <label class="fx-light" title="where the light comes from (shine, shade, depth)"><input id="light" aria-label="light" type="range" min="0" max="355" step="5" value="225" /><span class="fx-light-label">light <output id="lightOut"></output></span></label>
-        <label class="field fx-row" title="how far inside the edge shine, shade and inline sit (stems)"><span>inset</span><input id="fxInset" type="range" min="0" max="1" step="0.02" value="0.26" /><output id="fxInsetOut"></output></label>
+        <label class="field fx-row" title="how far inside the edge shine, shade and inline sit (stems; negative: over the outline)"><span>inset</span><input id="fxInset" type="range" min="-0.5" max="1" step="0.02" value="0.26" /><output id="fxInsetOut"></output></label>
       </div>
       <div class="settings-section">Timeline</div>
       <div class="settings-fields">

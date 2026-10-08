@@ -194,6 +194,7 @@ export function render(letters, opts = {}, ctx) {
   };
   const effectPaths = (list = []) => list.filter((e) => !e.layer || e.layer === 'over').map(effectPath).join('');
   const underPaths = (list = []) => list.filter((e) => e.layer === 'under').map(effectPath).join('');
+  const topPaths = (list = []) => list.filter((e) => e.layer === 'top').map(effectPath).join('');
   // Effects behind every letter (extrusions): drawn first, so a side never covers the
   // front of the letter before it.
   const behindPaths = (list = []) => list.filter((e) => e.layer === 'behind').map(effectPath).join('');
@@ -248,7 +249,7 @@ export function render(letters, opts = {}, ctx) {
         `<path data-part="lines" clip-path="url(#${id})" d="${lines.map((l) => lineData(l, lines0, sw, step)).join('')}" ${lineStyle}/>`;
     }
     const d = pathData(body);
-    return `${underPaths(fx)}<path data-part="fill" d="${d}" ${fillStyle}/>${effectPaths(fx)}<path data-part="outline" d="${d}" ${outlineStyle}/>${extra}`;
+    return `${underPaths(fx)}<path data-part="fill" d="${d}" ${fillStyle}/>${effectPaths(fx)}<path data-part="outline" d="${d}" ${outlineStyle}/>${topPaths(fx)}${extra}`;
   };
 
   let ordered = letters.filter((l) => l.shape.length);
