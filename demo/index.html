@@ -39,10 +39,8 @@
       overlap, or
       <span class="toggle" tabindex="0" role="switch" data-control="repel" data-on="on" data-off="off">repel each other into a shared seam</span>.
     </p>
-    <p>
-      Inner lines follow one rule for every letter: a line appears where the
-      swell from two parts of a letter meets across a gap, the notch of a k, the
-      mouth of a G, and runs out through the edge so the letter stays readable.
+    <p data-toggles>
+      Where a letter's swell meets itself across a gap, <span class="toggle" tabindex="0" role="switch" data-control="inner" data-on="on" data-off="off">inner lines</span> keep it readable.
     </p>
 
     <h2 data-puff>Presets</h2>
@@ -136,7 +134,7 @@ bouffont</textarea></label>
       </div>
       <div class="settings-section">Lines</div>
       <div class="settings-fields">
-        <div class="field" title="on: gaps narrower than a pen are drawn as one line; off: they stay open, both edges drawn"><span class="toggle" role="switch" tabindex="0" data-control="gaps" data-on="on" data-off="off">gap lines</span><select hidden id="gaps"><option value="on">on</option><option value="off">off</option></select></div>
+        <div class="field field-pair"><span class="toggle" role="switch" tabindex="0" data-control="gaps" data-on="on" data-off="off" title="on: gaps narrower than a pen are drawn as one line; off: they stay open, both edges drawn">gap lines</span><select hidden id="gaps"><option value="on">on</option><option value="off">off</option></select><span class="toggle" role="switch" tabindex="0" data-control="inner" data-on="on" data-off="off" title="lines where a letter's swell meets itself across a gap">inner lines</span><select hidden id="inner"><option value="on">on</option><option value="off">off</option></select></div>
         <label class="field"><span>smooth</span><input id="smooth" type="range" min="0" max="1.5" step="0.05" value="0" /><output id="smoothOut"></output></label>
         <label class="field"><span>simplify</span><input id="curves" type="range" min="0" max="0.5" step="0.01" value="0" /><output id="curvesOut"></output></label>
         <label class="field"><span>fairing</span><input id="fair" type="range" min="0" max="1" step="0.05" value="0" /><output id="fairOut"></output></label>

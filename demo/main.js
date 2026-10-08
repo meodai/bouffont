@@ -88,7 +88,7 @@ const DEFAULTS = {
   smooth: 0,
   tracking: 0,
 };
-const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0, ink: 0 };
+const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0, ink: 0, inner: 0.5 };
 const GAP_INK = 0.4; // the gap lines switch turns them on at this width (stems)
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const asObj = (v) => (v && typeof v === "object" ? v : {});
@@ -358,6 +358,7 @@ function syncControls() {
   $("repel").value = value("repel") ? "on" : "off";
   $("knit").value = value("knit") ? "0.25" : "0";
   $("gaps").value = renderValue("ink") ? "on" : "off";
+  $("inner").value = renderValue("inner") ? "on" : "off";
   for (const n of EFFECTS) $(n).value = effectOpts(n) ? "on" : "off";
   $("perLetter").value = effectOpts("depth")?.merge === false ? "on" : "off";
   $("perLetter").disabled = !effectOpts("depth");
@@ -436,6 +437,10 @@ function fromControl(id) {
     // Depth per letter: each side stacked with its letter instead of one block.
     case "perLetter":
       if (effectOpts("depth")) setEffectOpts("depth", { merge: v === "on" ? false : undefined });
+      break;
+    // Inner lines: where a letter's swell meets itself across a gap (render.inner).
+    case "inner":
+      setRender("inner", v === "on" ? (asObj(recipe.render).inner || RENDER_DEFAULTS.inner) : 0);
       break;
     case "gaps":
       setRender("ink", v === "on" ? (asObj(recipe.render).ink || GAP_INK) : 0);
@@ -649,6 +654,7 @@ for (const id of [
   ...EFFECTS,
   "perLetter",
   "gaps",
+  "inner",
   "structure",
 ])
   $(id).addEventListener("change", () => fromControl(id));
