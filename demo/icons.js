@@ -14,7 +14,7 @@ export function envelopeIcon(type) {
   const profile = envelopes[type];
   if (!profile) return '';
   const opts = { minHeight: 0.4, skew: type === 'parallelogram' ? 0.35 : 0 };
-  const n = 24, top = [], bottom = [];
+  const n = 48, top = [], bottom = [];
   for (let i = 0; i <= n; i++) {
     const u = i / n, [t, b] = profile(u, opts);
     const x = u * W * (1 - opts.skew);

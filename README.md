@@ -149,7 +149,16 @@ letter meets across a gap (a notch, the opening of a G), and run out through the
 ### Envelopes (outer shape)
 
 `rect`, `triangle`, `triangle-down`, `rhombus`, `circle`, `arch`, `bulge`, `pinch`,
-`wave`, `parallelogram`, or a function `(u, opts) => [top, bottom]`.
+`wave`, `parallelogram`, `cloud` (straight bottom, round puffs on top: `bumps`, `overlap`, `vary`; the seed moves the peaks and valleys), or your own: a function
+`(u, opts) => [top, bottom]` giving, for each position `u` across the piece (0 = left,
+1 = right), the top and bottom edge as fractions of the height (0 = top, 1 = bottom).
+`opts.rng` is a seeded random source, for shapes that vary with the seed.
+
+```js
+// a lens: thin at the ends, full height in the middle
+const lens = (u) => [0.5 - 0.5 * Math.sin(u * Math.PI), 0.5 + 0.5 * Math.sin(u * Math.PI)];
+envelope: { type: lens, height: 1.25 }
+```
 
 ```js
 envelope: { type: 'triangle', minHeight: 0.4, height: 1.25 }

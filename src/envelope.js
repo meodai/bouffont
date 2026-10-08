@@ -6,6 +6,25 @@ import { resample } from './geom/path.js';
 
 const tent = (u) => Math.abs(2 * u - 1); // 1 at the edges, 0 in the middle
 
+// The cloud's puffs, worked out once per envelope (the profile is asked for every point).
+// With a seeded `rng` (as applyEnvelope gives it) they move, lift and widen per seed.
+const puffCache = new WeakMap();
+function cloudPuffs(opts) {
+  if (puffCache.has(opts)) return puffCache.get(opts);
+  const { minHeight, bumps: n = 5, overlap = 0.8, vary = 0.6, rng } = opts;
+  const r = rng ?? (() => 0.5);
+  const jitter = (amount) => (r() * 2 - 1) * amount;
+  const peak = 0.4 + jitter(0.25 * vary); // where the tallest puff is
+  const puffs = Array.from({ length: n }, (_, i) => {
+    const c = (i + 0.5) / n + jitter((0.35 / n) * vary);
+    const w = (0.5 / n) * (1 + overlap * 1.5) * (1 + jitter(0.3 * vary));
+    const tall = minHeight + (1 - minHeight) * Math.exp(-(((c - peak) / 0.38) ** 2));
+    return { c, w, lift: Math.min(1, Math.max(minHeight * 0.7, tall * (1 + jitter(0.25 * vary)))) };
+  });
+  puffCache.set(opts, puffs);
+  return puffs;
+}
+
 export const envelopes = {
   rect: () => [0, 1],
   triangle: (u, { minHeight }) => [(1 - minHeight) * tent(u), 1],
@@ -31,6 +50,23 @@ export const envelopes = {
     const s = Math.sin((u * frequency + phase) * Math.PI * 2);
     return [(amplitude / 2) * (1 + s), 1 - (amplitude / 2) * (1 - s)];
   },
+  // A cloud: a straight bottom and a top made of overlapping round puffs (each a dome
+  // rising from the bottom), the tallest a little left of the middle, lower towards the
+  // ends. `bumps` puffs; `overlap` how much neighbours overlap (more: shallower dips);
+  // `minHeight` how high the end puffs reach; `vary` (0–1) how much the seed moves,
+  // lifts and widens them (where the peaks and valleys are).
+  cloud: (u, opts) => {
+    let top = 1;
+    for (const { c, w, lift } of cloudPuffs(opts)) {
+      const t = (u - c) / w;
+      if (Math.abs(t) < 1) top = Math.min(top, 1 - lift * Math.sqrt(1 - t * t));
+    }
+    // Both ends curve down into the straight bottom (a quarter circle), like the outer
+    // puffs of a drawn cloud.
+    const d = Math.min(u, 1 - u), e = 0.09;
+    if (d < e) top = 1 - (1 - top) * Math.sqrt(Math.max(0, 1 - (1 - d / e) ** 2));
+    return [Math.min(top, 0.95), 1];
+  },
   // Slanted rect: the profile is flat, the skew happens in `warp`.
   parallelogram: () => [0, 1],
 };
@@ -43,7 +79,8 @@ const DEFAULTS = { minHeight: 0.4, height: 1.25, skew: 0, samples: 64 };
  */
 export function applyEnvelope(letters, envelope, ctx) {
   if (!envelope || envelope === 'none' || envelope.type === 'none') return { letters, polygon: null };
-  const opts = { ...DEFAULTS, ...(typeof envelope === 'string' ? { type: envelope } : envelope) };
+  // Envelopes may vary with the seed (the cloud does): they get their own random stream.
+  const opts = { ...DEFAULTS, rng: ctx.rng.fork('envelope'), ...(typeof envelope === 'string' ? { type: envelope } : envelope) };
   if (opts.type === 'parallelogram' && !opts.skew) opts.skew = 0.35;
   const profile = typeof opts.type === 'function' ? opts.type : envelopes[opts.type];
   if (!profile) throw new Error(`bouffont: unknown envelope "${opts.type}"`);
