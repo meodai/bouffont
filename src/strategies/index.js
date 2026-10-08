@@ -60,9 +60,12 @@ export function* stepStrategies(letters, specs = [], ctx, { live = false } = {})
     const sctx = { ...ctx, rng, targets };
     const keepTargets = (result) => result.map((l, k) => (targets[k] ? l : current[k]));
     // Frames mid-strategy respect the barrier (alignment lines, obstructions) too.
+    // Every frame says which strategy it came from (`step`, its index in `specs`; once
+    // the strategy is done, `done: true`).
     const framed = (result) => {
       const kept = keepTargets(result);
-      return ctx.barrier ? kept.map((l) => ({ ...l, shape: keepOut(l, ctx.barrier) })) : kept;
+      const out = ctx.barrier ? kept.map((l) => ({ ...l, shape: keepOut(l, ctx.barrier) })) : kept;
+      return Object.assign(out, { step: i, done: false });
     };
     let result;
     // Live only: strategies that swell in one go show it in in-between frames.
@@ -83,7 +86,7 @@ export function* stepStrategies(letters, specs = [], ctx, { live = false } = {})
     current = fn.selfConstrained
       ? (ctx.barrier ? merged.map((l) => ({ ...l, shape: keepOut(l, ctx.barrier) })) : merged)
       : constrain(merged, current, ctx, opts);
-    yield current;
+    yield Object.assign(current, { step: i, done: true });
   }
   return current;
 }

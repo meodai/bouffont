@@ -129,7 +129,11 @@ export function bouffontLive(o) {
       const { stem, metrics, size, structured, details, envelope, obstacles } = setup.ctx;
       const { render: look, knit, repel, seed, effects: fx } = setup.opts;
       // The final letters already went through knit and repel.
-      return { letters: current, render: look, knit: done ? 0 : knit, repel: done ? false : repel, effects: done ? null : fx,
+      // Knit and repel run last; until they have, frames get them for display. Once
+      // they ran, the letters already went through them: never twice.
+      const finishedAt = setup.strategies.findIndex((s) => ['knit', 'repel'].includes(Array.isArray(s) ? s[0] : s?.type ?? s));
+      const already = done || (finishedAt !== -1 && (current.step > finishedAt || (current.step === finishedAt && current.done)));
+      return { letters: current, render: look, knit: already ? 0 : knit, repel: already ? false : repel, effects: done ? null : fx,
         ctx: { stem, metrics, size, structured, details, envelope, obstacles, seed } };
     },
     /** Finish the growth and return the finished piece, the same as `bouffont()`. */
