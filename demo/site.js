@@ -57,8 +57,34 @@ addEventListener('bouffont:settings', (e) => {
   titleOptions = e.detail.options;
   titleFont = e.detail.fontUrl;
   clearTimeout(titleTimer);
-  titleTimer = setTimeout(titles, 120);
+  titleTimer = setTimeout(() => (titles(), favicon()), 120);
 });
+
+// The favicon: "ff" grown with the same settings, filled in the page colour with black
+// outlines, on a transparent background.
+let faviconRun = 0;
+async function favicon() {
+  const run = ++faviconRun;
+  let markup;
+  try {
+    markup = await grow({ ...titleOptions, text: 'ff', font: titleFont });
+  } catch {
+    return;
+  }
+  if (run !== faviconRun) return;
+  // The page colour (--bg) as plain rgb, read back from a painted pixel: safe in any
+  // favicon, whatever colour syntax the CSS uses.
+  const paint = document.createElement('canvas').getContext('2d');
+  paint.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#fff';
+  paint.fillRect(0, 0, 1, 1);
+  const [r, g, b] = paint.getImageData(0, 0, 1, 1).data;
+  const fill = `rgb(${r} ${g} ${b})`;
+  const icon = markup
+    .replace(/(data-part="fill"[^>]*?)fill="[^"]*"/g, `$1fill="${fill}"`)
+    // Square, so it fills the tab icon without being stretched.
+    .replace(/\swidth="[^"]*"\sheight="[^"]*"/, ' width="64" height="64" preserveAspectRatio="xMidYMid meet"');
+  document.querySelector('link[rel="icon"]').href = `data:image/svg+xml,${encodeURIComponent(icon)}`;
+}
 
 // ── Figures ────────────────────────────────────────────────────────────────────
 function figure(markup, caption) {
@@ -217,6 +243,7 @@ const showSettings = () => {
 presetList();
 toggles();
 const titlesDone = titles();
+favicon();
 const rest = Promise.all([samples(), parts(), fonts(), generations()]);
 await titlesDone;
 // Only now does the page have its real height.

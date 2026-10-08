@@ -6,6 +6,7 @@
   <title>bouffont: generative puffy lettering as SVG</title>
   <meta name="description" content="bouffont is a creative-coding library that grows the letters of any font into puffy, bubbly, blocky lettering as SVG." />
   <link rel="stylesheet" href="./site.css" />
+  <link rel="icon" type="image/svg+xml" href="data:," />
 </head>
 <body>
   <main class="page">
@@ -19,8 +20,8 @@
     <h2 data-puff>One hand, any font</h2>
     <p data-toggles>
       The font, <span class="toggle-select"><select data-mirror="font" aria-label="font"></select></span>,
-      serves as skeleton.
-      <span class="toggle" tabindex="0" role="switch" data-control="structure" data-on="on" data-off="off">Each glyph is thinned down to its centre lines</span>;
+      serves as <span class="toggle" tabindex="0" role="switch" data-control="structure" data-on="on" data-off="off">skeleton</span>.
+      Each glyph is thinned down to its centre lines;
       serifs, stroke contrast and terminals are thrown away. Then every
       letter is redrawn with the same pen. The style is a combination of the font's anatomy and the algorithm.
     </p>
