@@ -48,8 +48,6 @@ $("align").innerHTML = richOptions(["middle", "bottom", "top", "both"].map((valu
 $("order").innerHTML = richOptions(Object.entries({ ltr: "normal", rtl: "reverse", center: "center", edges: "edges", random: "random" })
   .map(([value, label]) => ({ value, label, icon: orderIcon(value) })));
 $("playMode").innerHTML = richOptions(["zigzag", "loop"].map((value) => ({ value, icon: repeatIcon(value) })));
-// The light as a dial (it drives the hidden #light slider).
-const lightDial = dial($("light"));
 
 // Each font's own face, for its option (loaded when the page is idle).
 (window.requestIdleCallback ?? setTimeout)(() => {
@@ -240,14 +238,11 @@ const effectOpts = (name) => {
   const e = (effective().effects ?? []).find((x) => (Array.isArray(x) ? x[0] : x?.type ?? x) === name);
   return e ? (Array.isArray(e) ? e[1] ?? {} : typeof e === "string" ? {} : e) : null;
 };
-const lightAngle = () => LIT.map(effectOpts).find((o) => o?.angle != null)?.angle ?? Number($("light").value);
+const lightAngle = () => LIT.map(effectOpts).find((o) => o?.angle != null)?.angle ?? 225;
 function setEffect(name, on) {
   const list = EFFECTS.flatMap((n) => {
-    // A newly switched-on effect takes the current light and, once set, the inset.
-    const setInsetNow = INSET.map(effectOpts).find((o) => o?.inset != null)?.inset;
-    const opts = n === name
-      ? (on ? { ...(LIT.includes(n) ? { angle: lightAngle() } : {}), ...(INSET.includes(n) && setInsetNow != null ? { inset: setInsetNow } : {}) } : null)
-      : effectOpts(n);
+    // A newly added effect takes the light of the others.
+    const opts = n === name ? (on ? (LIT.includes(n) ? { angle: lightAngle() } : {}) : null) : effectOpts(n);
     return opts ? [[n, opts]] : [];
   });
   set("effects", list.length ? list : undefined);
@@ -264,38 +259,9 @@ const setEffectOpts = (name, changes) => {
   });
   if (list.length) set("effects", list);
 };
-// Inset: how far inside the edge shine, shade and inline sit; one value for all three
-// (until it is set, each keeps its own default).
-const INSET = ["shine", "shade", "inline"];
-const insetValue = () => INSET.map(effectOpts).find((o) => o?.inset != null)?.inset ?? 0.26;
-const setInset = (inset) => {
-  const list = EFFECTS.flatMap((n) => {
-    const opts = effectOpts(n);
-    return opts ? [[n, INSET.includes(n) ? { ...opts, inset } : opts]] : [];
-  });
-  if (list.length) set("effects", list);
-};
-// Intensity: one value for all effects (inline has none); it also scales the band.
-const BAND = 0.4; // the band's width (stems) when the preset has none
+// The band (render.outline): its width in stems when the preset has none.
+const BAND = 0.4;
 const bandBase = () => asObj(recipe.render).outline || BAND;
-const intensityValue = () =>
-  EFFECTS.map(effectOpts).find((o) => o?.intensity != null)?.intensity ??
-  (renderValue("outline") ? renderValue("outline") / bandBase() : 1);
-const setIntensity = (intensity) => {
-  const list = EFFECTS.flatMap((n) => {
-    const opts = effectOpts(n);
-    return opts ? [[n, n === "inline" ? opts : { ...opts, intensity }]] : [];
-  });
-  if (list.length) set("effects", list);
-  if (renderValue("outline")) setRender("outline", +(bandBase() * intensity).toFixed(3));
-};
-const setLight = (angle) => {
-  const list = EFFECTS.flatMap((n) => {
-    const opts = effectOpts(n);
-    return opts ? [[n, LIT.includes(n) ? { ...opts, angle } : opts]] : [];
-  });
-  if (list.length) set("effects", list);
-};
 
 const sliders = {
   lineHeight: {
@@ -319,25 +285,6 @@ const sliders = {
     fmt: 2,
   },
   follow: { get: follow, set: setFollow, fmt: 1 },
-  // How far inside the edge shine, shade and inline sit (stems).
-  fxInset: {
-    get: () => insetValue(),
-    set: (v) => setInset(v),
-    fmt: 2,
-  },
-  // How strong the effects are (and how thick the band).
-  fxIntensity: {
-    get: () => intensityValue(),
-    set: (v) => setIntensity(v),
-    fmt: 2,
-  },
-  // Light direction of the shine (degrees; only with shine on).
-  light: {
-    get: () => lightAngle(),
-    set: (v) => setLight(v),
-    fmt: 0,
-    pad: 3, // 045, 225: the number keeps its width
-  },
   smooth: {
     get: () =>
       typeof value("smooth") === "object"
@@ -364,6 +311,150 @@ const showSlider = (id) => {
   $(`${id}Out`).textContent = !v && s.off ? s.off : v.toFixed(s.fmt).padStart(s.pad ?? 0, "0");
 };
 
+// ── Effects: a list of cards, each with its own settings and a × to remove it; new ones
+// come from the "add effect" dropdown. The band (render.outline) is listed like an effect.
+const FX_ORDER = ["shine", "shade", "inline", "depth", "band"];
+const fxOn = (n) => (n === "band" ? !!renderValue("outline") : !!effectOpts(n));
+const optSlider = (n, key, min, max, step, dflt) => ({
+  label: key, min, max, step,
+  get: () => effectOpts(n)?.[key] ?? dflt,
+  set: (v) => setEffectOpts(n, { [key]: v }),
+});
+const inset = (n, dflt) => optSlider(n, "inset", -0.5, 1, 0.02, dflt);
+const intensity = (n) => optSlider(n, "intensity", 0.25, 2, 0.05, 1);
+const FX = {
+  shine: { title: "a specular highlight on each letter", light: true, sliders: [inset("shine", 0.26), intensity("shine")] },
+  shade: { title: "a shade on the side away from the light", light: true, sliders: [inset("shade", 0.16), intensity("shade")] },
+  inline: { title: "a thin line inside every edge", sliders: [inset("inline", 0.3)] },
+  depth: {
+    title: "3D: the letters extruded away from the light",
+    light: true,
+    sliders: [intensity("depth")],
+    each: {
+      title: "each letter its own side, stacked with it (instead of one block behind all)",
+      get: () => effectOpts("depth")?.merge === false,
+      set: (on) => setEffectOpts("depth", { merge: on ? false : undefined }),
+    },
+  },
+  band: {
+    title: "a fat outline around the whole piece",
+    sliders: [{
+      label: "intensity", min: 0.25, max: 2, step: 0.05,
+      get: () => renderValue("outline") / bandBase(),
+      set: (v) => setRender("outline", +(bandBase() * v).toFixed(3)),
+    }],
+    each: {
+      title: "each letter its own band (instead of one around the whole piece)",
+      get: () => renderValue("band") === "letter",
+      set: (on) => setRender("band", on ? "letter" : "piece"),
+    },
+  },
+};
+const fxChanged = () => {
+  syncControls();
+  writeCode();
+  schedule();
+};
+let fxShown = null; // the effects the cards were built for
+let fxSync = []; // per card: put the current values into its controls
+function buildEffects(list) {
+  const cards = $("fxCards");
+  cards.replaceChildren();
+  fxSync = [];
+  for (const n of list) {
+    const fx = FX[n];
+    const card = document.createElement("div");
+    card.className = "fx-card";
+    card.title = fx.title;
+    card.innerHTML = `<div class="fx-head"><span class="fx-name">${n}</span><button type="button" class="fx-remove" aria-label="remove ${n}" title="remove">×</button></div><div class="fx-grid"><div class="fx-controls"></div></div>`;
+    card.querySelector(".fx-remove").addEventListener("click", () => {
+      if (n === "band") setRender("outline", 0);
+      else setEffect(n, false);
+      fxChanged();
+    });
+    const controls = card.querySelector(".fx-controls");
+    for (const sl of fx.sliders) {
+      const row = document.createElement("label");
+      row.className = "field";
+      row.innerHTML = `<span>${sl.label}</span><input type="range" min="${sl.min}" max="${sl.max}" step="${sl.step}" /><output></output>`;
+      const [input, out] = [row.querySelector("input"), row.querySelector("output")];
+      const show = () => (out.textContent = Number(input.value).toFixed(2));
+      input.addEventListener("input", () => {
+        sl.set(Number(input.value));
+        show();
+        writeCode();
+        schedule();
+      });
+      fxSync.push(() => {
+        input.value = String(sl.get());
+        show();
+      });
+      controls.append(row);
+    }
+    if (fx.each) {
+      const row = document.createElement("div");
+      row.className = "field";
+      row.innerHTML = `<span class="toggle" role="switch" tabindex="0" title="${fx.each.title}">per letter</span>`;
+      const sw = row.firstChild;
+      const flip = () => {
+        fx.each.set(!fx.each.get());
+        fxChanged();
+      };
+      sw.addEventListener("click", flip);
+      sw.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        flip();
+      });
+      fxSync.push(() => sw.setAttribute("aria-checked", String(fx.each.get())));
+      controls.append(row);
+    }
+    if (fx.light) {
+      // Where the light comes from, as a dial (it drives a hidden slider).
+      const light = document.createElement("label");
+      light.className = "fx-light";
+      light.title = "where the light comes from";
+      light.innerHTML = `<input aria-label="${n} light" type="range" min="0" max="355" step="5" /><span class="fx-light-label">light <output></output></span>`;
+      const [input, out] = [light.querySelector("input"), light.querySelector("output")];
+      const get = () => effectOpts(n)?.angle ?? 225;
+      input.value = String(get());
+      card.querySelector(".fx-grid").append(light);
+      const d = dial(input);
+      input.addEventListener("input", () => {
+        setEffectOpts(n, { angle: Number(input.value) });
+        out.textContent = String(input.value).padStart(3, "0");
+        writeCode();
+        schedule();
+      });
+      fxSync.push(() => {
+        input.value = String(get());
+        out.textContent = String(get()).padStart(3, "0");
+        d.sync();
+      });
+    }
+    cards.append(card);
+  }
+}
+function syncEffects() {
+  const list = FX_ORDER.filter(fxOn);
+  if (list.join() !== fxShown) {
+    fxShown = list.join();
+    buildEffects(list);
+  }
+  for (const f of fxSync) f();
+  const free = FX_ORDER.filter((n) => !list.includes(n));
+  $("fxAdd").innerHTML = `<option value="">${free.length ? "choose…" : "all added"}</option>` + free.map((n) => `<option value="${n}">${n}</option>`).join("");
+  $("fxAdd").value = "";
+  $("fxAdd").disabled = !free.length;
+}
+$("fxAdd").addEventListener("change", () => {
+  const n = $("fxAdd").value;
+  if (!n) return;
+  if (n === "band") setRender("outline", bandBase());
+  else setEffect(n, true);
+  fxChanged();
+});
+
 function syncControls() {
   $("text").value = overrides.text ?? "";
   $("seed").value = overrides.seed ?? "";
@@ -380,15 +471,8 @@ function syncControls() {
   $("gaps").value = renderValue("ink") ? "on" : "off";
   $("inner").value = renderValue("inner") ? "on" : "off";
   $("band").value = renderValue("outline") ? "on" : "off";
-  $("bandEach").value = renderValue("band") === "letter" ? "on" : "off";
-  $("bandEach").disabled = !renderValue("outline");
   for (const n of EFFECTS) $(n).value = effectOpts(n) ? "on" : "off";
-  $("perLetter").value = effectOpts("depth")?.merge === false ? "on" : "off";
-  $("perLetter").disabled = !effectOpts("depth");
-  $("light").disabled = !LIT.some(effectOpts);
-  lightDial?.sync();
-  $("fxInset").disabled = !INSET.some(effectOpts);
-  $("fxIntensity").disabled = !["depth", "shade", "shine"].some(effectOpts) && !renderValue("outline");
+  syncEffects();
   $("order").value = renderValue("order");
   $("structure").value = skeletonOn() ? "on" : "off";
   $("follow").disabled = !skeletonOn();
@@ -458,23 +542,15 @@ function fromControl(id) {
       setEffect(id, v === "on");
       syncControls();
       break;
-    // Depth per letter: each side stacked with its letter instead of one block.
-    case "perLetter":
-      if (effectOpts("depth")) setEffectOpts("depth", { merge: v === "on" ? false : undefined });
-      break;
     // Inner lines: where a letter's swell meets itself across a gap (render.inner).
     case "inner":
       setRender("inner", v === "on" ? (asObj(recipe.render).inner || RENDER_DEFAULTS.inner) : 0);
       break;
     // The band: a fat outline around the whole piece (render.outline), the preset's own
-    // width or 0.6 stems.
+    // width or BAND.
     case "band":
-      setRender("outline", v === "on" ? +(bandBase() * intensityValue()).toFixed(3) : 0);
-      syncControls(); // "per letter" needs a band
-      break;
-    // Band per letter: each letter its own band instead of one around the whole piece.
-    case "bandEach":
-      setRender("band", v === "on" ? "letter" : "piece");
+      setRender("outline", v === "on" ? bandBase() : 0);
+      syncControls();
       break;
     case "gaps":
       setRender("ink", v === "on" ? (asObj(recipe.render).ink || GAP_INK) : 0);
@@ -688,9 +764,7 @@ for (const id of [
   "order",
   "knit",
   ...EFFECTS,
-  "perLetter",
   "band",
-  "bandEach",
   "gaps",
   "inner",
   "structure",

@@ -233,7 +233,7 @@ function toggles() {
   };
   const act = (e) => {
     const w = e.target.closest('.toggle');
-    if (!w || $(w.dataset.control).disabled) return; // the setting has no effect right now
+    if (!w?.dataset.control || $(w.dataset.control).disabled) return; // not a text control, or no effect right now
     if (e.type === 'keydown') {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       e.preventDefault();
