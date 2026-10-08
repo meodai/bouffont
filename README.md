@@ -296,9 +296,18 @@ The light-based effects share `angle`: where the light comes from, in degrees
 | `depth` | `angle`, `length`, `fill`, `merge` | the letters extruded away from the light (3D). `merge: true` (default): one block behind all letters; `false`: each letter's side stacked with it. `fill: 'paper'` (white, outlined) or `'ink'` |
 | `inline` | `inset` | a thin line inside every edge, counters too |
 
-Effects inside the letters are drawn between the fill and the outline; `depth` is
-drawn before every letter, and the drawing grows to fit it.
-- Custom effects: `registerEffect(name, (letter, ctx, opts) => [{ part, shape }])`.
+`inset` is how far inside the edge an effect sits, in stems, set per effect (defaults:
+`shine` 0.26, `shade` 0.16, `inline` 0.3). A negative inset puts it past the edge,
+drawn over the outline:
+
+```js
+effects: [['shade', { inset: 0.16 }], ['inline', { inset: 0.5 }], ['shine', { inset: -0.3 }]]
+```
+
+Effects inside the letters are drawn between the fill and the outline (with a negative
+inset, over it); `depth` is drawn before every letter, and the drawing grows to fit it.
+
+Custom effects: `registerEffect(name, (letter, ctx, opts) => [{ part, shape }])`.
 
 ### Render
 
