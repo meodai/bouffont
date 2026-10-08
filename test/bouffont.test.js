@@ -25,6 +25,29 @@ describe('effects', () => {
     expect(piece.svg).toMatch(/data-part="fill"[^>]*\/><path data-part="shine"[^>]*\/>(<path data-part="shine"[^>]*\/>)*<path data-part="outline"/);
     expect(() => bouffont({ text: 'a', font, effects: ['nope'] })).toThrow(/unknown effect/);
   });
+
+  it('draws shade and inline inside the letters, depth behind all of them', () => {
+    const effects = [['depth', {}], ['shade', {}], ['inline', {}]];
+    const piece = bouffont({ text: 'ob', font, seed: 1, preset: 'throwup', effects });
+    for (const l of piece.letters) {
+      for (const e of l.effects.filter((x) => x.layer !== 'behind')) {
+        expect(geom.area(geom.difference(e.shape, l.shape))).toBeLessThan(1);
+      }
+    }
+    // One merged block of depth, before (behind) every letter; the drawing grows to fit it.
+    expect(piece.svg.match(/data-part="depth"/g)).toHaveLength(1);
+    expect(piece.svg.indexOf('data-part="depth"')).toBeLessThan(piece.svg.indexOf('data-part="letter"'));
+    expect(piece.svg).toMatch(/data-part="shade"[^>]*fill="#000"/);
+    const plain = bouffont({ text: 'ob', font, seed: 1, preset: 'throwup' });
+    expect(piece.width).toBeGreaterThan(plain.width);
+  });
+
+  it('can give every letter its own depth, stacked with it', () => {
+    const piece = bouffont({ text: 'ob', font, seed: 1, preset: 'throwup', effects: [['depth', { merge: false }]] });
+    // One side per letter, inside the letter's group, before its fill.
+    expect(piece.svg.match(/data-part="depth"/g)).toHaveLength(2);
+    expect(piece.svg).toMatch(/data-part="letter"[^>]*><path data-part="depth"[^>]*\/><path data-part="fill"/);
+  });
 });
 
 describe('live growth', () => {

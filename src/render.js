@@ -184,9 +184,19 @@ export function render(letters, opts = {}, ctx) {
   const uid = '__UID__';
   let clipId = 0;
   // Effects (shine…) sit between the fill and the outline: inside the letter, under its line.
-  const effectStyle = `fill="${paper}" stroke="${ink}" stroke-width="${round(sw * 0.6)}" stroke-linejoin="round"`;
-  const effectPaths = (list = []) =>
-    list.map((e) => `<path data-part="${e.part}" d="${pathData(e.shape)}" ${effectStyle}/>`).join('');
+  // Effects (see effects.js): `kind` says how a shape is drawn.
+  const thin = round(sw * 0.6);
+  const effectPath = (e) => {
+    const d = pathData(e.shape);
+    if (e.kind === 'ink') return `<path data-part="${e.part}" d="${d}" fill="${ink}" fill-rule="evenodd"/>`;
+    if (e.kind === 'line') return `<path data-part="${e.part}" d="${d}" fill="none" stroke="${ink}" stroke-width="${thin}" stroke-linejoin="round"/>`;
+    return `<path data-part="${e.part}" d="${d}" fill="${paper}" stroke="${ink}" stroke-width="${thin}" stroke-linejoin="round"/>`;
+  };
+  const effectPaths = (list = []) => list.filter((e) => !e.layer || e.layer === 'over').map(effectPath).join('');
+  const underPaths = (list = []) => list.filter((e) => e.layer === 'under').map(effectPath).join('');
+  // Effects behind every letter (extrusions): drawn first, so a side never covers the
+  // front of the letter before it.
+  const behindPaths = (list = []) => list.filter((e) => e.layer === 'behind').map(effectPath).join('');
   const letterPaths = (shape, inner = null, fx = []) => {
     let gaps = thinGaps(shape, inkR);
     let body = shape, extra = '';
@@ -238,7 +248,7 @@ export function render(letters, opts = {}, ctx) {
         `<path data-part="lines" clip-path="url(#${id})" d="${lines.map((l) => lineData(l, lines0, sw, step)).join('')}" ${lineStyle}/>`;
     }
     const d = pathData(body);
-    return `<path data-part="fill" d="${d}" ${fillStyle}/>${effectPaths(fx)}<path data-part="outline" d="${d}" ${outlineStyle}/>${extra}`;
+    return `${underPaths(fx)}<path data-part="fill" d="${d}" ${fillStyle}/>${effectPaths(fx)}<path data-part="outline" d="${d}" ${outlineStyle}/>${extra}`;
   };
 
   let ordered = letters.filter((l) => l.shape.length);
@@ -258,15 +268,27 @@ export function render(letters, opts = {}, ctx) {
 
   const body = [];
   const all = union(...ordered.map((l) => l.shape));
+  // Extrusions reach past the letters: they count for the bounds and the outline band.
+  const behindShapes = ordered.flatMap((l) => (l.effects ?? []).filter((e) => e.layer === 'behind' || e.layer === 'under').flatMap((e) => e.shape));
+  const silhouette = behindShapes.length ? union(all, behindShapes) : all;
   let bounds = all;
 
   if (o.outline) {
     const reach = o.outline * ctx.stem + sw / 2;
-    bounds = offset(all, reach, { join: 'round' });
+    bounds = offset(silhouette, reach, { join: 'round' });
     // The outer outline: the silhouette stroked as wide as the band (so it can be
     // restyled like the letter outlines) and filled, so gaps between letters are ink too.
-    body.push(`<path data-part="band" d="${pathData(all)}" fill="${ink}" fill-rule="nonzero" stroke="${ink}" stroke-width="${round(reach * 2)}" stroke-linejoin="round"/>`);
+    body.push(`<path data-part="band" d="${pathData(silhouette)}" fill="${ink}" fill-rule="nonzero" stroke="${ink}" stroke-width="${round(reach * 2)}" stroke-linejoin="round"/>`);
   }
+
+  // All letters' extrusions as one block per kind: sides that meet merge, no crossings.
+  const merged = new Map();
+  for (const e of ordered.flatMap((l) => (l.effects ?? []).filter((x) => x.layer === 'behind'))) {
+    const key = `${e.part}|${e.kind}`;
+    merged.set(key, merged.has(key) ? { ...e, shape: union(merged.get(key).shape, e.shape) } : e);
+  }
+  const behind = behindPaths([...merged.values()]);
+  if (behind) body.push(`<g data-part="behind">${behind}</g>`);
 
   if (o.mode === 'merge') {
     body.push(`<g data-part="letter" data-index="all">${letterPaths(all, ordered.flatMap(innerOf), ordered.flatMap((l) => l.effects ?? []))}</g>`);
@@ -279,7 +301,7 @@ export function render(letters, opts = {}, ctx) {
   const extras = ordered.flatMap((l) => l.extras ?? []);
   for (const e of extras) body.push(`<g data-part="extra">${fillAndOutline(pathData(e))}</g>`);
 
-  const b = bbox([...bounds, ...extras.flat()]);
+  const b = bbox([...bounds, ...extras.flat(), ...behindShapes]);
   const pad = o.padding * ctx.stem + sw;
   const vb = [b.minX - pad, b.minY - pad, b.width + pad * 2, b.height + pad * 2].map(round);
   const bg = o.background ? `<rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="${o.background}"/>` : '';

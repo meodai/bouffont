@@ -251,13 +251,21 @@ decorations: [
 Drawn on the finished letters, inside them, without changing their shape:
 
 ```js
-effects: [['shine', { angle: 225, inset: 0.26, width: 0.4, length: 1.9, dot: 0.2 }]]
+effects: [['depth', {}], ['shade', {}], ['shine', { angle: 225 }]]
 ```
 
-- `shine`: a specular highlight, a streak just inside the edge that faces the light
-  (`angle` in degrees, 225 = from the top left; 0 = right, 90 = down) with a dot past
-  its end. Drawn in white with a thin outline, between the letter's fill and outline,
-  as `data-part="shine"`. Shows best on coloured fills.
+The light-based effects share `angle`: where the light comes from, in degrees
+(225 = top left; 0 = right, 90 = down). Each is drawn as its own `data-part`.
+
+| effect | options | |
+|---|---|---|
+| `shine` | `angle`, `inset`, `width`, `length`, `dot` | specular highlight: a streak just inside the edge facing the light, with a dot past its end. White with a thin outline |
+| `shade` | `angle`, `inset`, `width` | the shine's opposite: a solid crescent just inside the edges facing away from the light |
+| `depth` | `angle`, `length`, `fill`, `merge` | the letters extruded away from the light (3D). `merge: true` (default): one block behind all letters; `false`: each letter's side stacked with it. `fill: 'paper'` (white, outlined) or `'ink'` |
+| `inline` | `inset` | a thin line inside every edge, counters too |
+
+Effects inside the letters are drawn between the fill and the outline; `depth` is
+drawn before every letter, and the drawing grows to fit it.
 - Custom effects: `registerEffect(name, (letter, ctx, opts) => [{ part, shape }])`.
 
 ### Render

@@ -226,11 +226,56 @@ async function parseCode(src) {
 
 // ── Controls ⇄ state ─────────────────────────────────────────────────────────────
 // Effects: the shine is `effects: [['shine', { angle }]]`.
-const shineOf = () => {
-  const s = (effective().effects ?? []).find((e) => (Array.isArray(e) ? e[0] : e) === "shine");
-  return s ? (Array.isArray(s) ? s[1] ?? {} : {}) : null;
+// Effects, kept in this order (depth is drawn behind the letters anyway); all but
+// inline follow the light. Options set in the code panel are kept.
+const EFFECTS = ["depth", "shade", "inline", "shine"];
+const LIT = ["depth", "shade", "shine"];
+const effectOpts = (name) => {
+  const e = (effective().effects ?? []).find((x) => (Array.isArray(x) ? x[0] : x?.type ?? x) === name);
+  return e ? (Array.isArray(e) ? e[1] ?? {} : typeof e === "string" ? {} : e) : null;
 };
-const setShine = (o) => set("effects", o ? [["shine", o]] : undefined);
+const lightAngle = () => LIT.map(effectOpts).find((o) => o?.angle != null)?.angle ?? Number($("light").value);
+function setEffect(name, on) {
+  const list = EFFECTS.flatMap((n) => {
+    // A newly switched-on effect takes the current light and, once set, the inset.
+    const setInsetNow = INSET.map(effectOpts).find((o) => o?.inset != null)?.inset;
+    const opts = n === name
+      ? (on ? { ...(LIT.includes(n) ? { angle: lightAngle() } : {}), ...(INSET.includes(n) && setInsetNow != null ? { inset: setInsetNow } : {}) } : null)
+      : effectOpts(n);
+    return opts ? [[n, opts]] : [];
+  });
+  set("effects", list.length ? list : undefined);
+}
+// Change one effect's options (undefined removes an option).
+const setEffectOpts = (name, changes) => {
+  const list = EFFECTS.flatMap((n) => {
+    let opts = effectOpts(n);
+    if (opts && n === name) {
+      opts = { ...opts, ...changes };
+      for (const k of Object.keys(opts)) if (opts[k] === undefined) delete opts[k];
+    }
+    return opts ? [[n, opts]] : [];
+  });
+  if (list.length) set("effects", list);
+};
+// Inset: how far inside the edge shine, shade and inline sit; one value for all three
+// (until it is set, each keeps its own default).
+const INSET = ["shine", "shade", "inline"];
+const insetValue = () => INSET.map(effectOpts).find((o) => o?.inset != null)?.inset ?? 0.26;
+const setInset = (inset) => {
+  const list = EFFECTS.flatMap((n) => {
+    const opts = effectOpts(n);
+    return opts ? [[n, INSET.includes(n) ? { ...opts, inset } : opts]] : [];
+  });
+  if (list.length) set("effects", list);
+};
+const setLight = (angle) => {
+  const list = EFFECTS.flatMap((n) => {
+    const opts = effectOpts(n);
+    return opts ? [[n, LIT.includes(n) ? { ...opts, angle } : opts]] : [];
+  });
+  if (list.length) set("effects", list);
+};
 
 const sliders = {
   lineHeight: {
@@ -254,10 +299,16 @@ const sliders = {
     fmt: 2,
   },
   follow: { get: follow, set: setFollow, fmt: 1 },
+  // How far inside the edge shine, shade and inline sit (stems).
+  fxInset: {
+    get: () => insetValue(),
+    set: (v) => setInset(v),
+    fmt: 2,
+  },
   // Light direction of the shine (degrees; only with shine on).
   light: {
-    get: () => shineOf()?.angle ?? 225,
-    set: (v) => shineOf() && setShine({ ...shineOf(), angle: v }),
+    get: () => lightAngle(),
+    set: (v) => setLight(v),
     fmt: 0,
   },
   smooth: {
@@ -298,8 +349,11 @@ function syncControls() {
   $("repel").value = value("repel") ? "on" : "off";
   $("knit").value = value("knit") ? "0.25" : "0";
   $("gaps").value = renderValue("ink") ? "on" : "off";
-  $("shine").value = shineOf() ? "on" : "off";
-  $("light").disabled = !shineOf();
+  for (const n of EFFECTS) $(n).value = effectOpts(n) ? "on" : "off";
+  $("perLetter").value = effectOpts("depth")?.merge === false ? "on" : "off";
+  $("perLetter").disabled = !effectOpts("depth");
+  $("light").disabled = !LIT.some(effectOpts);
+  $("fxInset").disabled = !INSET.some(effectOpts);
   $("order").value = renderValue("order");
   $("structure").value = skeletonOn() ? "on" : "off";
   $("follow").disabled = !skeletonOn();
@@ -360,8 +414,15 @@ function fromControl(id) {
       break;
     // Gap lines: narrow gaps drawn as one line (the preset's ink), or left open (ink 0).
     case "shine":
-      setShine(v === "on" ? { angle: Number($("light").value) } : null);
+    case "shade":
+    case "depth":
+    case "inline":
+      setEffect(id, v === "on");
       syncControls();
+      break;
+    // Depth per letter: each side stacked with its letter instead of one block.
+    case "perLetter":
+      if (effectOpts("depth")) setEffectOpts("depth", { merge: v === "on" ? false : undefined });
       break;
     case "gaps":
       setRender("ink", v === "on" ? (asObj(recipe.render).ink ?? RENDER_DEFAULTS.ink) : 0);
@@ -571,7 +632,8 @@ for (const id of [
   "repel",
   "order",
   "knit",
-  "shine",
+  ...EFFECTS,
+  "perLetter",
   "gaps",
   "structure",
 ])
@@ -598,11 +660,22 @@ $("copy").addEventListener("click", async () => {
 $("download").addEventListener("click", (e) => {
   e.preventDefault(); // it sits in the code panel's summary: don't fold it
   // Bake the fill colour the page shows (the playground fills use var(--bg)) into the file.
-  const shown = document.querySelector('#stage [data-part="fill"]');
-  const fill = shown ? getComputedStyle(shown).fill : null;
-  const svg = fill
-    ? last.replace(/(data-part="fill"[^>]*?)fill="[^"]*"/g, `$1fill="${fill}"`)
-    : last;
+  // Bake the colours the page shows (fills and shade use the page colour) into the
+  // file, as plain rgb so any viewer reads them.
+  const rgb = (color) => {
+    const paint = document.createElement("canvas").getContext("2d");
+    paint.fillStyle = color;
+    paint.fillRect(0, 0, 1, 1);
+    const [r, g, b] = paint.getImageData(0, 0, 1, 1).data;
+    return `rgb(${r} ${g} ${b})`;
+  };
+  let svg = last;
+  for (const part of ["fill", "shade"]) {
+    const shown = document.querySelector(`#stage [data-part="${part}"]`);
+    if (!shown) continue;
+    const color = rgb(getComputedStyle(shown).fill);
+    svg = svg.replace(new RegExp(`(data-part="${part}"[^>]*?)fill="[^"]*"`, "g"), `$1fill="${color}"`);
+  }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
   a.download = `${(String(overrides.text) || "piece").replace(/\s+/g, "-")}-${overrides.seed}.svg`;

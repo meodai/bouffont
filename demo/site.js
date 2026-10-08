@@ -185,6 +185,7 @@ function toggles() {
       const value = $(w.dataset.control).value;
       const on = w.dataset.value != null ? value === w.dataset.value : String(Number(value) || value) !== String(Number(w.dataset.off) || w.dataset.off);
       w.setAttribute('aria-checked', on);
+      w.toggleAttribute('aria-disabled', $(w.dataset.control).disabled);
     }
     for (const m of mirrors) {
       const src = $(m.dataset.mirror);
@@ -195,7 +196,7 @@ function toggles() {
   };
   const act = (e) => {
     const w = e.target.closest('.toggle');
-    if (!w) return;
+    if (!w || $(w.dataset.control).disabled) return; // the setting has no effect right now
     if (e.type === 'keydown') {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       e.preventDefault();

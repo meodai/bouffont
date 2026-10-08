@@ -909,3 +909,14 @@ figcaption {
   fill: oklch(from var(--bg) l c calc(h + 100));
   stroke: none;
 }
+
+/* A switch whose setting has no effect right now (e.g. per letter without depth). */
+.toggle[aria-disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* The shade in the playground and the titles: a darker page colour instead of black. */
+:is(#stage, [data-puff], .preset-name) [data-part="shade"] {
+  fill: oklch(from var(--bg) calc(l - 0.3) calc(c - 0.02) h);
+}

@@ -1,7 +1,19 @@
-// Effects: drawn on the finished letters, inside them, without changing their shape.
-// Each effect returns shapes per letter, `{ part, shape }`, that render draws between the
-// letter's fill and its outline (data-part = part). Sizes in stems.
+// Effects: drawn on the finished letters without changing their shape. Each effect
+// returns shapes per letter, `{ part, shape, kind?, layer? }` (data-part = part):
+//   kind  'paper' (default): white with a thin outline · 'ink': solid black ·
+//         'line': an outline only
+//   layer 'over' (default): between the letter's fill and its outline ·
+//         'under': before the letter's fill, inside its group (stacked with it) ·
+//         'behind': behind every letter (extrusions)
+// Light-based effects take `angle`: where the light comes from, in degrees (225 = top
+// left; 0 = right, 90 = down). Sizes in stems.
 import { bbox, difference, intersection, offset, open, signedArea, union } from './geom/clip.js';
+
+const lightDir = (angle) => {
+  const a = (angle * Math.PI) / 180;
+  return { lx: Math.cos(a), ly: Math.sin(a) };
+};
+const moveShape = (shape, dx, dy) => shape.map((ring) => ring.map((p) => ({ x: p.x + dx, y: p.y + dy })));
 
 const circle = (c, r, n = 24) =>
   Array.from({ length: n }, (_, i) => {
@@ -28,7 +40,7 @@ const outer = (shape) => {
 export function shine(letter, ctx, { angle = 225, inset = 0.26, width = 0.4, length = 1.9, dot = 0.2 } = {}) {
   const stem = ctx.stem;
   if (!letter.shape.length) return [];
-  const a = (angle * Math.PI) / 180, lx = Math.cos(a), ly = Math.sin(a);
+  const { lx, ly } = lightDir(angle);
   const inner = offset(outer(letter.shape), -inset * stem);
   if (!inner.length) return [];
   // Crescent: the inner shape minus itself moved away from the light.
@@ -71,7 +83,51 @@ export function shine(letter, ctx, { angle = 225, inset = 0.26, width = 0.4, len
   return out;
 }
 
-export const effects = { shine };
+/**
+ * Shade: the shine's opposite, a solid crescent just inside the edges that face away
+ * from the light. Counters stay clear.
+ */
+export function shade(letter, ctx, { angle = 225, inset = 0.16, width = 0.7 } = {}) {
+  const stem = ctx.stem;
+  if (!letter.shape.length) return [];
+  const { lx, ly } = lightDir(angle);
+  const inner = offset(outer(letter.shape), -inset * stem);
+  if (!inner.length) return [];
+  // The inner shape minus itself moved towards the light: the far side's crescent.
+  let band = difference(inner, moveShape(inner, lx * width * stem, ly * width * stem));
+  band = intersection(open(band, width * stem * 0.2), letter.shape)
+    .filter((r) => Math.abs(signedArea(r)) > (width * stem) ** 2 * 0.3);
+  if (!band.length) return [];
+  return [{ part: 'shade', shape: band, kind: 'ink' }];
+}
+
+/**
+ * Depth: the letter extruded away from the light, a side behind it (3D block letters).
+ * `merge` (default): the sides of all letters as one block behind them all; `false`:
+ * each letter's side stacked with that letter. `fill`:
+ * 'paper' (white, outlined) or 'ink' (solid; disappears into an outline band).
+ */
+export function depth(letter, ctx, { angle = 225, length = 0.8, fill = 'paper', merge = true } = {}) {
+  const stem = ctx.stem;
+  if (!letter.shape.length) return [];
+  const { lx, ly } = lightDir(angle);
+  // Sweep: copies stepped along the way, close enough to leave no gaps.
+  const d = length * stem, steps = Math.max(2, Math.ceil(d / (stem * 0.12)));
+  const copies = Array.from({ length: steps }, (_, k) => moveShape(letter.shape, -lx * d * (k + 1) / steps, -ly * d * (k + 1) / steps));
+  const side = union(letter.shape, ...copies);
+  // merge: one block behind every letter; otherwise each letter's own side, stacked
+  // with it (drawn just before its front, over the letter beneath).
+  return [{ part: 'depth', shape: side, kind: fill === 'paper' ? 'paper' : 'ink', layer: merge ? 'behind' : 'under' }];
+}
+
+/** Inline: a thin line `inset` inside every edge (counters too): the double-line look. */
+export function inline(letter, ctx, { inset = 0.3 } = {}) {
+  if (!letter.shape.length) return [];
+  const ring = offset(letter.shape, -inset * ctx.stem);
+  return ring.length ? [{ part: 'inline', shape: ring, kind: 'line' }] : [];
+}
+
+export const effects = { shine, shade, depth, inline };
 
 export function registerEffect(name, fn) {
   effects[name] = fn;
