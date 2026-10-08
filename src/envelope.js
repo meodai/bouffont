@@ -5,6 +5,9 @@ import { bbox, mapPoints, normalize } from './geom/clip.js';
 import { resample } from './geom/path.js';
 
 const tent = (u) => Math.abs(2 * u - 1); // 1 at the edges, 0 in the middle
+// The same, with the 0 at `peak` (0–1): each side slopes evenly to its own end.
+const tentAt = (u, peak) => (u < peak ? (peak - u) / peak : (u - peak) / (1 - peak));
+const triangleAt = (u, minHeight, peak) => [(1 - minHeight) * tentAt(u, Math.min(0.99, Math.max(0.01, peak))), 1];
 
 // The cloud's puffs, worked out once per envelope (the profile is asked for every point).
 // With a seeded `rng` (as applyEnvelope gives it) they move, lift and widen per seed.
@@ -27,7 +30,10 @@ function cloudPuffs(opts) {
 
 export const envelopes = {
   rect: () => [0, 1],
-  triangle: (u, { minHeight }) => [(1 - minHeight) * tent(u), 1],
+  // `peak`: where the tip is, 0–1 across (0.5: the middle).
+  triangle: (u, { minHeight, peak = 0.5 }) => triangleAt(u, minHeight, peak),
+  'triangle-left': (u, { minHeight }) => triangleAt(u, minHeight, 0.25),
+  'triangle-right': (u, { minHeight }) => triangleAt(u, minHeight, 0.75),
   'triangle-down': (u, { minHeight }) => [0, 1 - (1 - minHeight) * tent(u)],
   rhombus: (u, { minHeight }) => {
     const k = ((1 - minHeight) / 2) * tent(u);

@@ -148,7 +148,8 @@ letter meets across a gap (a notch, the opening of a G), and run out through the
 
 ### Envelopes (outer shape)
 
-`rect`, `triangle`, `triangle-down`, `rhombus`, `circle`, `arch`, `bulge`, `pinch`,
+`rect`, `triangle` (`peak`: where its tip is, 0–1 across), `triangle-left` (tip at
+1/4), `triangle-right` (tip at 3/4), `triangle-down`, `rhombus`, `circle`, `arch`, `bulge`, `pinch`,
 `wave`, `parallelogram`, `cloud` (straight bottom, round puffs on top: `bumps`, `overlap`, `vary`; the seed moves the peaks and valleys), or your own: a function
 `(u, opts) => [top, bottom]` giving, for each position `u` across the piece (0 = left,
 1 = right), the top and bottom edge as fractions of the height (0 = top, 1 = bottom).
