@@ -246,6 +246,20 @@ decorations: [
 ```
 
 
+### Effects
+
+Drawn on the finished letters, inside them, without changing their shape:
+
+```js
+effects: [['shine', { angle: 225, inset: 0.26, width: 0.4, length: 1.9, dot: 0.2 }]]
+```
+
+- `shine`: a specular highlight, a streak just inside the edge that faces the light
+  (`angle` in degrees, 225 = from the top left; 0 = right, 90 = down) with a dot past
+  its end. Drawn in white with a thin outline, between the letter's fill and outline,
+  as `data-part="shine"`. Shows best on coloured fills.
+- Custom effects: `registerEffect(name, (letter, ctx, opts) => [{ part, shape }])`.
+
 ### Render
 
 - `mode: 'stack'` (default) draws every letter outlined and stacked by `order`:

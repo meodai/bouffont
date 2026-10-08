@@ -6,6 +6,7 @@ import { balanceDensity } from './density.js';
 import { alignBarrier } from './align.js';
 import { runStrategies, stepStrategies, strategies } from './strategies/index.js';
 import { runDecorations } from './decorations.js';
+import { runEffects } from './effects.js';
 import { render } from './render.js';
 import { presets } from './presets.js';
 import { toDOM } from './dom.js';
@@ -14,6 +15,7 @@ export { loadFont, measureFont, layout } from './font.js';
 export { envelopes } from './envelope.js';
 export { strategies, registerStrategy, constrain } from './strategies/index.js';
 export { decorations, registerDecoration } from './decorations.js';
+export { effects, registerEffect } from './effects.js';
 export { presets };
 export { createRng } from './rng.js';
 export { toDOM } from './dom.js';
@@ -122,9 +124,9 @@ export function bouffontLive(o) {
      */
     frame() {
       const { stem, metrics, size, structured, details, envelope } = setup.ctx;
-      const { render: look, knit, repel, seed } = setup.opts;
+      const { render: look, knit, repel, seed, effects: fx } = setup.opts;
       // The final letters already went through knit and repel.
-      return { letters: current, render: look, knit: done ? 0 : knit, repel: done ? false : repel,
+      return { letters: current, render: look, knit: done ? 0 : knit, repel: done ? false : repel, effects: done ? null : fx,
         ctx: { stem, metrics, size, structured, details, envelope, seed } };
     },
     /** Finish the growth and return the finished piece, the same as `bouffont()`. */
@@ -142,12 +144,12 @@ bouffont.live = bouffontLive;
  * last; mid-growth frames get them for display too, so seams show from the first frame
  * on (the growth itself is unchanged).
  */
-export function drawFrame({ letters, render: look, knit, repel, ctx: plain }) {
+export function drawFrame({ letters, render: look, knit, repel, effects: fx, ctx: plain }) {
   const ctx = { ...plain, rng: createRng(plain.seed) };
   let out = letters;
   if (knit) out = strategies.knit(out, ctx, { gap: knit });
   if (repel) out = strategies.repel(out, ctx, repel === true ? {} : repel);
-  return render(out, look, ctx);
+  return render(runEffects(out, fx, ctx), look, ctx);
 }
 
 // Everything before the strategies: layout, structure, envelope, density, alignment,
@@ -208,7 +210,7 @@ function prepare(o) {
 
 // Everything after the strategies: decorations and the drawing.
 function finish({ opts, ctx, polygon }, grown) {
-  const decorated = runDecorations(grown, opts.decorations, ctx);
+  const decorated = runEffects(runDecorations(grown, opts.decorations, ctx), opts.effects, ctx);
   const out = render(decorated, opts.render, ctx);
   return {
     ...out,

@@ -225,6 +225,13 @@ async function parseCode(src) {
 }
 
 // ── Controls ⇄ state ─────────────────────────────────────────────────────────────
+// Effects: the shine is `effects: [['shine', { angle }]]`.
+const shineOf = () => {
+  const s = (effective().effects ?? []).find((e) => (Array.isArray(e) ? e[0] : e) === "shine");
+  return s ? (Array.isArray(s) ? s[1] ?? {} : {}) : null;
+};
+const setShine = (o) => set("effects", o ? [["shine", o]] : undefined);
+
 const sliders = {
   lineHeight: {
     get: () => value("lineHeight"),
@@ -247,6 +254,12 @@ const sliders = {
     fmt: 2,
   },
   follow: { get: follow, set: setFollow, fmt: 1 },
+  // Light direction of the shine (degrees; only with shine on).
+  light: {
+    get: () => shineOf()?.angle ?? 225,
+    set: (v) => shineOf() && setShine({ ...shineOf(), angle: v }),
+    fmt: 0,
+  },
   smooth: {
     get: () =>
       typeof value("smooth") === "object"
@@ -285,6 +298,8 @@ function syncControls() {
   $("repel").value = value("repel") ? "on" : "off";
   $("knit").value = value("knit") ? "0.25" : "0";
   $("gaps").value = renderValue("ink") ? "on" : "off";
+  $("shine").value = shineOf() ? "on" : "off";
+  $("light").disabled = !shineOf();
   $("order").value = renderValue("order");
   $("structure").value = skeletonOn() ? "on" : "off";
   $("follow").disabled = !skeletonOn();
@@ -344,6 +359,10 @@ function fromControl(id) {
       set("knit", Number(v));
       break;
     // Gap lines: narrow gaps drawn as one line (the preset's ink), or left open (ink 0).
+    case "shine":
+      setShine(v === "on" ? { angle: Number($("light").value) } : null);
+      syncControls();
+      break;
     case "gaps":
       setRender("ink", v === "on" ? (asObj(recipe.render).ink ?? RENDER_DEFAULTS.ink) : 0);
       break;
@@ -552,6 +571,7 @@ for (const id of [
   "repel",
   "order",
   "knit",
+  "shine",
   "gaps",
   "structure",
 ])

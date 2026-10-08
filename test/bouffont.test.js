@@ -14,6 +14,19 @@ const ctxFor = (size = 200) => {
   return { stem: metrics.stem, metrics, size, rng: createRng(1), envelope: null };
 };
 
+describe('effects', () => {
+  it('puts a shine inside each letter, between its fill and its outline', () => {
+    const piece = bouffont({ text: 'ob', font, seed: 1, preset: 'throwup', effects: [['shine', {}]] });
+    for (const l of piece.letters) {
+      const shine = l.effects.filter((e) => e.part === 'shine').flatMap((e) => e.shape);
+      expect(shine.length).toBeGreaterThan(0);
+      expect(geom.area(geom.difference(shine, l.shape))).toBeLessThan(1);
+    }
+    expect(piece.svg).toMatch(/data-part="fill"[^>]*\/><path data-part="shine"[^>]*\/>(<path data-part="shine"[^>]*\/>)*<path data-part="outline"/);
+    expect(() => bouffont({ text: 'a', font, effects: ['nope'] })).toThrow(/unknown effect/);
+  });
+});
+
 describe('live growth', () => {
   it('ends exactly where bouffont() does, for every preset', () => {
     for (const preset of Object.keys(presets)) {

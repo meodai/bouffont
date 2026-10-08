@@ -183,7 +183,11 @@ export function render(letters, opts = {}, ctx) {
   // the same SVG: a placeholder, replaced by a hash of the finished markup below.
   const uid = '__UID__';
   let clipId = 0;
-  const letterPaths = (shape, inner = null) => {
+  // Effects (shine…) sit between the fill and the outline: inside the letter, under its line.
+  const effectStyle = `fill="${paper}" stroke="${ink}" stroke-width="${round(sw * 0.6)}" stroke-linejoin="round"`;
+  const effectPaths = (list = []) =>
+    list.map((e) => `<path data-part="${e.part}" d="${pathData(e.shape)}" ${effectStyle}/>`).join('');
+  const letterPaths = (shape, inner = null, fx = []) => {
     let gaps = thinGaps(shape, inkR);
     let body = shape, extra = '';
     let gapPolys = [];
@@ -233,7 +237,8 @@ export function render(letters, opts = {}, ctx) {
       extra += `<clipPath id="${id}"><path d="${pathData(body)}"/></clipPath>` +
         `<path data-part="lines" clip-path="url(#${id})" d="${lines.map((l) => lineData(l, lines0, sw, step)).join('')}" ${lineStyle}/>`;
     }
-    return `${fillAndOutline(pathData(body))}${extra}`;
+    const d = pathData(body);
+    return `<path data-part="fill" d="${d}" ${fillStyle}/>${effectPaths(fx)}<path data-part="outline" d="${d}" ${outlineStyle}/>${extra}`;
   };
 
   let ordered = letters.filter((l) => l.shape.length);
@@ -264,10 +269,10 @@ export function render(letters, opts = {}, ctx) {
   }
 
   if (o.mode === 'merge') {
-    body.push(`<g data-part="letter" data-index="all">${letterPaths(all, ordered.flatMap(innerOf))}</g>`);
+    body.push(`<g data-part="letter" data-index="all">${letterPaths(all, ordered.flatMap(innerOf), ordered.flatMap((l) => l.effects ?? []))}</g>`);
   } else {
     for (const l of ordered) {
-      body.push(`<g data-part="letter" data-index="${l.index}" data-char="${escape(l.char)}">${letterPaths(l.shape, innerOf(l))}</g>`);
+      body.push(`<g data-part="letter" data-index="${l.index}" data-char="${escape(l.char)}">${letterPaths(l.shape, innerOf(l), l.effects)}</g>`);
     }
   }
 

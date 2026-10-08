@@ -141,6 +141,11 @@ bouffont</textarea></label>
         <label class="field"><span>simplify</span><input id="curves" type="range" min="0" max="0.5" step="0.01" value="0" /><output id="curvesOut"></output></label>
         <label class="field"><span>fairing</span><input id="fair" type="range" min="0" max="1" step="0.05" value="0" /><output id="fairOut"></output></label>
       </div>
+      <div class="settings-section">Effects</div>
+      <div class="settings-fields">
+        <div class="field" title="a specular highlight on each letter"><span class="toggle" role="switch" tabindex="0" data-control="shine" data-on="on" data-off="off">shine</span><select hidden id="shine"><option value="off">off</option><option value="on">on</option></select></div>
+        <label class="field" title="where the light comes from"><span>light</span><input id="light" type="range" min="0" max="355" step="5" value="225" /><output id="lightOut"></output></label>
+      </div>
       <div class="settings-section">Timeline</div>
       <div class="settings-fields">
         <div class="field timeline">
