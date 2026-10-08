@@ -160,10 +160,16 @@ a:hover {
   --line: 3.5px;
 }
 .page h2 {
-  --line: 3px;
+  --line: 2px;
 }
 .page h3 {
-  --line: 2.5px;
+  --line: 1.75px;
+}
+/* The smaller titles: the band a little wider than a line on screen, whatever the preset
+   (the main title keeps its band in proportion). */
+.page :is(h2, h3) svg [data-part="band"] {
+  vector-effect: non-scaling-stroke;
+  stroke-width: calc(var(--line) * 2.5);
 }
 .sbs {
   --line: 2.5px;

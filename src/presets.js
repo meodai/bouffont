@@ -112,6 +112,30 @@ export const presets = {
     render: { mode: 'stack', stroke: 0.18 },
   },
 
+  // Hard edges: blocky, cut angular, stretched sideways and on the diagonal, in a
+  // triangle split by a wall, with a double inline and a low shine (best with Inter).
+  shard: {
+    structure: false,
+    envelope: { type: 'triangle' },
+    obstructions: { type: 'walls' },
+    density: 1,
+    lineHeight: 0.6,
+    tracking: -0.8,
+    overgrow: 0.75,
+    strategies: [
+      ['block', { amount: 0.25, keep: 0.25 }],
+      ['angular', { detail: 0.45, bulge: 'out' }],
+      ['stretch', { amount: 1.2, chance: 0.4, directions: ['left', 'right', 'up-right', 'down-left'] }],
+      ['angular', { detail: 0.2, bulge: 'out' }],
+    ],
+    generations: [
+      ['block', { amount: 0.3 }, { keep: 0.25 }],
+      ['angular', {}, { detail: 0.2, bulge: 'out' }],
+    ],
+    effects: [['inline', { inset: 0.06 }], ['inline', { inset: 0.28 }], ['shine', { angle: 150, inset: 0.26, intensity: 0.7 }]],
+    render: { mode: 'stack', stroke: 0.14, curves: 0, lines: { angles: 8, cap: 'square' }, ink: 0.4 },
+  },
+
   // Simulations (after nshelton.github.io/home/growth). Slower: seconds, not ms.
 
   // Differential line growth: the outline wrinkles as it grows, like coral.

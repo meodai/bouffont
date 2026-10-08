@@ -128,7 +128,7 @@ letter meets across a gap (a notch, the opening of a G), and run out through the
 | `text`        |         | |
 | `font`        |         | opentype.js Font, see `loadFont` |
 | `seed`        | `1`     | number or string |
-| `preset`      |         | `throwup`, `bubbles`, `bubble`, `block`, `simple`, `crowd`, `candy`, `marquee`, and the slower simulations `coral`, `lichen`, `frost`; other options merge over it |
+| `preset`      |         | `throwup`, `bubbles`, `bubble`, `block`, `simple`, `crowd`, `candy`, `marquee`, `shard`, and the slower simulations `coral`, `lichen`, `frost`; other options merge over it |
 | `size`        | `200`   | px |
 | `lineHeight`  | `1`     | text may contain newlines; lines are centred, baselines this × `size` apart |
 | `structure`   | on in presets | redraw letters from their centre lines with one pen, see above |
