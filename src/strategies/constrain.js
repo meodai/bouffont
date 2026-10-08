@@ -32,8 +32,13 @@ export function constrain(next, prev, ctx, { neighbors = 'ignore', gap = 0, clip
     const bounds = offset(ctx.envelope, (clip === true ? 0 : clip) * ctx.stem);
     out = out.map((l) => ({ ...l, shape: intersection(l.shape, bounds) }));
   }
-  if (ctx.barrier) {
-    out = out.map((l) => ({ ...l, shape: difference(l.shape, ctx.barrier) }));
-  }
+  if (ctx.barrier) out = out.map((l) => ({ ...l, shape: keepOut(l, ctx.barrier) }));
   return out;
 }
+
+/**
+ * A letter's shape minus a barrier (alignment lines, obstructions), except the letter's
+ * own drawing (its core, which moves with it): only the growth gives way.
+ */
+export const keepOut = (letter, barrier) =>
+  difference(letter.shape, letter.core ? difference(barrier, letter.core) : barrier);

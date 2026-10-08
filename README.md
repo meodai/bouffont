@@ -160,6 +160,38 @@ envelope: { type: 'wave', amplitude: 0.3, frequency: 1.5 }
 Letters are warped so their height follows the shape. Growth can be kept inside it
 with `clip: true`.
 
+### Obstructions
+
+Shapes in the space around the letters that growth can't enter, so the letters grow
+around them (an envelope gives the outer shape; obstructions sit inside it).
+
+```js
+obstructions: 'dots'
+obstructions: { type: 'dots', count: 6, size: 1.1, vary: 0.3, front: 0.85, wobble: 0.15, gap: 0.22 }
+obstructions: { type: 'hole', size: 0.35, x: 0.5, y: 0.5, wobble: 0.15 }
+obstructions: { type: 'holes', count: 3, size: 0.25, vary: 0.25 }
+```
+
+- `dots`: seeded blobs where the letters grow, within `front` stems of a letter's
+  drawing (on it too, unless `onLetters: false`), so outlines dent around them.
+- `hole`: one big blob (radius `size` × the piece's smaller side, at `x`, `y` across the
+  piece) the letters grow around. It may sit on the letters: their drawings stay whole,
+  only the growth gives way.
+- `holes`: `count` (3) such blobs at seeded random spots, each `size` (0.25) × the
+  piece's smaller side (± `vary`), not overlapping.
+- `walls`: `count` slightly wavy walls across the piece (`angle`: 0 = horizontal,
+  90 = vertical; `width` 1.4 stems, `wobble`), evenly spaced. Growth can't cross them,
+  so the piece splits into rooms, like an envelope with inner walls. Through a letter,
+  only its skeleton shows.
+- Every obstacle may sit on the letters: their own drawings stay, only the growth
+  gives way, so the skeleton shows inside a hole, a wall or a dot.
+- Obstacles are blobs, not circles (`wobble`: how uneven), so the dents are as soft as
+  the letters' own outlines.
+- `gap`: how far the growth keeps clear of them; `show: false` leaves only the dents.
+- A function `(letters, ctx, opts) => polygons`, or plain polygons, work too.
+- Drawn behind the letters as `data-part="obstruction"`. Every strategy respects them,
+  like the `align` lines.
+
 ### Align
 
 `align: 'bottom'` adds a line along the baseline that growth can't cross, so the
@@ -281,7 +313,7 @@ drawn before every letter, and the drawing grows to fit it.
   instead of polygons, e.g. `0.08` stems. `fair` (default `0`, off) irons out lumps up
   to that size first, e.g. `0.35`. `corners` (default `56`°) keeps sharper turns crisp. Set
   `curves: 0` for raw polygons; the `simple` preset does this.
-- `ink` (default `0.3` stems) and `gaps`: inside a letter, a gap narrower than 2× `ink`
+- `ink` (default `0`, off; try `0.4` stems) and `gaps`: inside a letter, a gap narrower than 2× `ink`
   is two outlines running side by side. With `gaps: 'line'` (default) it is closed and
   drawn as one line along its middle, with the outline pen; `gaps: 'ink'` fills it
   solid; `ink: 0` leaves it alone.

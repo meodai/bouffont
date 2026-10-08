@@ -1,7 +1,7 @@
 // Strategy registry and the shared neighbour/envelope constraint.
 // A strategy is `(letters, ctx, opts) => letters` and works on all letters at once.
 // All lengths in opts are in stems (the font's measured stroke thickness).
-import { constrain } from './constrain.js';
+import { constrain, keepOut } from './constrain.js';
 import { inflate, block, chamfer, soften, smooth } from './shape.js';
 import { angular } from './angular.js';
 import { wobble, stretch, bounce } from './distort.js';
@@ -59,22 +59,30 @@ export function* stepStrategies(letters, specs = [], ctx, { live = false } = {})
     const targets = pickTargets(current, opts, rng);
     const sctx = { ...ctx, rng, targets };
     const keepTargets = (result) => result.map((l, k) => (targets[k] ? l : current[k]));
+    // Frames mid-strategy respect the barrier (alignment lines, obstructions) too.
+    const framed = (result) => {
+      const kept = keepTargets(result);
+      return ctx.barrier ? kept.map((l) => ({ ...l, shape: keepOut(l, ctx.barrier) })) : kept;
+    };
     let result;
     // Live only: strategies that swell in one go show it in in-between frames.
     if (live && fn.tween && !fn.stepwise) {
-      for (const frame of fn.tween(current, sctx, opts, offset)) yield keepTargets(frame);
+      for (const frame of fn.tween(current, sctx, opts, offset)) yield framed(frame);
     }
     if (fn.stepwise) {
       const steps = fn.stepwise(current, sctx, opts);
       let r = steps.next();
-      for (; !r.done; r = steps.next()) yield keepTargets(r.value);
+      for (; !r.done; r = steps.next()) yield framed(r.value);
       result = r.value;
     } else {
       result = fn(current, sctx, opts);
     }
     const merged = keepTargets(result);
-    // `grow` handles neighbours step by step itself.
-    current = fn.selfConstrained ? merged : constrain(merged, current, ctx, opts);
+    // `grow` and `overgrow` handle neighbours themselves; the barrier (alignment lines,
+    // obstructions) still applies.
+    current = fn.selfConstrained
+      ? (ctx.barrier ? merged.map((l) => ({ ...l, shape: keepOut(l, ctx.barrier) })) : merged)
+      : constrain(merged, current, ctx, opts);
     yield current;
   }
   return current;

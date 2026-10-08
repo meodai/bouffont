@@ -7,6 +7,8 @@ import { alignBarrier } from './align.js';
 import { runStrategies, stepStrategies, strategies } from './strategies/index.js';
 import { runDecorations } from './decorations.js';
 import { runEffects } from './effects.js';
+import { makeObstructions, obstructionBarrier } from './obstructions.js';
+import { union } from './geom/clip.js';
 import { render } from './render.js';
 import { presets } from './presets.js';
 import { toDOM } from './dom.js';
@@ -16,6 +18,7 @@ export { envelopes } from './envelope.js';
 export { strategies, registerStrategy, constrain } from './strategies/index.js';
 export { decorations, registerDecoration } from './decorations.js';
 export { effects, registerEffect } from './effects.js';
+export { obstructions } from './obstructions.js';
 export { presets };
 export { createRng } from './rng.js';
 export { toDOM } from './dom.js';
@@ -123,11 +126,11 @@ export function bouffontLive(o) {
      * worker: frames are independent, so several can be drawn at once).
      */
     frame() {
-      const { stem, metrics, size, structured, details, envelope } = setup.ctx;
+      const { stem, metrics, size, structured, details, envelope, obstacles } = setup.ctx;
       const { render: look, knit, repel, seed, effects: fx } = setup.opts;
       // The final letters already went through knit and repel.
       return { letters: current, render: look, knit: done ? 0 : knit, repel: done ? false : repel, effects: done ? null : fx,
-        ctx: { stem, metrics, size, structured, details, envelope, seed } };
+        ctx: { stem, metrics, size, structured, details, envelope, obstacles, seed } };
     },
     /** Finish the growth and return the finished piece, the same as `bouffont()`. */
     final() {
@@ -194,6 +197,14 @@ function prepare(o) {
     capHeight: metrics.capHeight, size: opts.size,
     lastBaseline: (Math.max(0, ...laid.map((l) => l.line ?? 0))) * (opts.lineHeight ?? 1) * opts.size,
   });
+  // Obstructions: shapes growth can't enter. They join the barrier and are drawn
+  // (unless `show: false`).
+  const obstacles = makeObstructions(opts.obstructions, warped, ctx);
+  if (obstacles.length) {
+    const keepOut = obstructionBarrier(obstacles, opts.obstructions, ctx);
+    ctx.barrier = ctx.barrier ? union(ctx.barrier, keepOut) : keepOut;
+    if (opts.obstructions?.show !== false) ctx.obstacles = obstacles;
+  }
 
   const strategies = [...(opts.strategies ?? [])];
   // Keep growing outward after meeting the neighbours (stems); contacts stay.

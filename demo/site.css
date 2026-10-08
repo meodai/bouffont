@@ -920,3 +920,8 @@ figcaption {
 :is(#stage, [data-puff], .preset-name) [data-part="shade"] {
   fill: oklch(from var(--bg) calc(l - 0.3) calc(c - 0.02) h);
 }
+
+/* Obstructions shape the growth but stay invisible on the page: only the dents show. */
+:is(#stage, [data-puff], .preset-name) [data-part="obstructions"] {
+  display: none;
+}

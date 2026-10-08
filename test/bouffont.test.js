@@ -50,6 +50,36 @@ describe('effects', () => {
   });
 });
 
+describe('obstructions', () => {
+  it('makes the letters grow around them, keeping a gap', () => {
+    const opts = { text: 'salle', font, seed: 2, preset: 'throwup', obstructions: { type: 'dots', count: 5, gap: 0.2 } };
+    const piece = bouffont(opts);
+    const dots = [...piece.svg.matchAll(/data-part="obstruction" d="([^"]+)"/g)];
+    expect(dots).toHaveLength(1);
+    // Compared with the same piece without them, the letters gave way.
+    const plain = bouffont({ ...opts, obstructions: undefined });
+    const dented = piece.letters.reduce((s, l) => s + geom.area(l.shape), 0);
+    const free = plain.letters.reduce((s, l) => s + geom.area(l.shape), 0);
+    expect(dented).toBeLessThan(free);
+    expect(() => bouffont({ ...opts, obstructions: 'nope' })).toThrow(/unknown obstruction/);
+  });
+
+  it('keeps the growth out of a hole and walls, but never erases a letter', () => {
+    for (const obstructions of [{ type: 'hole' }, { type: 'holes' }, { type: 'walls', count: 2, angle: 80 }]) {
+      const piece = bouffont({ text: 'salle\npetit', font, seed: 2, preset: 'throwup', obstructions });
+      const d = piece.svg.match(/data-part="obstruction" d="([^"]+)"/);
+      expect(d).not.toBeNull();
+      // Every letter still covers its own drawing (its core): only the growth gave way.
+      for (const l of piece.letters) expect(geom.area(geom.difference(l.core, geom.offset(l.shape, 1)))).toBeLessThan(5);
+    }
+  });
+
+  it('can stay invisible, leaving only the dents', () => {
+    const piece = bouffont({ text: 'salle', font, seed: 2, preset: 'throwup', obstructions: { type: 'dots', show: false } });
+    expect(piece.svg).not.toMatch(/data-part="obstruction"/);
+  });
+});
+
 describe('live growth', () => {
   it('ends exactly where bouffont() does, for every preset', () => {
     for (const preset of Object.keys(presets)) {

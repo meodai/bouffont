@@ -23,7 +23,7 @@ const DEFAULTS = {
   // Gaps inside a letter narrower than 2× this (stems): two outlines running side by
   // side. 'line' (default) closes the gap and draws one line along its middle, the
   // outline's width; 'ink' fills it solid. `ink: 0` leaves gaps alone.
-  ink: 0.3,
+  ink: 0, // off: narrow gaps stay open (try 0.4)
   gaps: 'line',
   // Inner lines on structured letters: minimum length in stems; 0 turns them off.
   inner: 0.5,
@@ -288,6 +288,10 @@ export function render(letters, opts = {}, ctx) {
     merged.set(key, merged.has(key) ? { ...e, shape: union(merged.get(key).shape, e.shape) } : e);
   }
   const behind = behindPaths([...merged.values()]);
+  // Obstructions: what the letters grew around.
+  if (ctx.obstacles?.length) {
+    body.push(`<g data-part="obstructions"><path data-part="obstruction" d="${pathData(ctx.obstacles)}" fill="${paper}" stroke="${ink}" stroke-width="${round(sw)}" stroke-linejoin="round"/></g>`);
+  }
   if (behind) body.push(`<g data-part="behind">${behind}</g>`);
 
   if (o.mode === 'merge') {
@@ -301,7 +305,7 @@ export function render(letters, opts = {}, ctx) {
   const extras = ordered.flatMap((l) => l.extras ?? []);
   for (const e of extras) body.push(`<g data-part="extra">${fillAndOutline(pathData(e))}</g>`);
 
-  const b = bbox([...bounds, ...extras.flat(), ...behindShapes]);
+  const b = bbox([...bounds, ...extras.flat(), ...behindShapes, ...(ctx.obstacles ?? [])]);
   const pad = o.padding * ctx.stem + sw;
   const vb = [b.minX - pad, b.minY - pad, b.width + pad * 2, b.height + pad * 2].map(round);
   const bg = o.background ? `<rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="${o.background}"/>` : '';

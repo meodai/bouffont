@@ -24,6 +24,18 @@ export function envelopeIcon(type) {
   return svg(`<path d="M${top.join('L')}L${bottom.reverse().join('L')}Z"/>`);
 }
 
+// Obstacles: nothing, a few dots, or one hole in the middle.
+export const obstructionIcon = (type) =>
+  type === 'dots'
+    ? svg(`<circle cx="4" cy="4" r="2.5"/><circle cx="13" cy="9" r="3.5"/><circle cx="19" cy="3" r="1.8"/>`)
+    : type === 'walls'
+      ? svg(`<rect x="0" y="0" width="${W}" height="${H}"/><path d="M0 ${H / 2}C${W / 3} ${H / 2 - 2} ${(2 * W) / 3} ${H / 2 + 2} ${W} ${H / 2}"/>`)
+      : type === 'holes'
+        ? svg(`<rect x="0" y="0" width="${W}" height="${H}"/><circle cx="6" cy="5" r="3"/><circle cx="15" cy="9" r="3.5"/><circle cx="18" cy="3" r="1.8"/>`)
+      : type === 'hole'
+      ? svg(`<rect x="0" y="0" width="${W}" height="${H}"/><circle cx="${W / 2}" cy="${H / 2}" r="4.5"/>`)
+        : svg(`<rect x="0" y="0" width="${W}" height="${H}" stroke-dasharray="2 2.5"/>`);
+
 // Three letters standing on, hanging from or floating between the lines.
 export function alignIcon(mode) {
   const bars = [[2, 6], [9, 3], [16, 5]]; // x, height

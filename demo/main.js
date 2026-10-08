@@ -1,8 +1,8 @@
-import { bouffontLive, loadFont, presets, envelopes, geom } from "../src/index.js";
+import { bouffontLive, loadFont, presets, envelopes, obstructions, geom } from "../src/index.js";
 import { pool } from "./pool.js";
 import iosevkaUrl from "./fonts/iosevka-400-normal.woff?url";
 import { highlightCode } from "./highlight.js";
-import { alignIcon, envelopeIcon, orderIcon, repeatIcon, richOptions } from "./icons.js";
+import { alignIcon, envelopeIcon, obstructionIcon, orderIcon, repeatIcon, richOptions } from "./icons.js";
 
 const files = {
   ...import.meta.glob(
@@ -42,6 +42,7 @@ const $ = (id) => document.getElementById(id);
 $("font").innerHTML = richOptions(Object.keys(fonts).map((value) => ({ value, style: `font-family: 'bf ${value}', ui-monospace, monospace` })));
 $("preset").innerHTML = richOptions(Object.keys(presets).map((value) => ({ value })));
 $("envelope").innerHTML = richOptions(["(preset)", "none", ...Object.keys(envelopes)].map((value) => ({ value, icon: envelopeIcon(value) })));
+$("obstructions").innerHTML = richOptions(["none", ...Object.keys(obstructions)].map((value) => ({ value, icon: obstructionIcon(value) })));
 $("align").innerHTML = richOptions(["middle", "bottom", "top", "both"].map((value) => ({ value, icon: alignIcon(value) })));
 $("order").innerHTML = richOptions(Object.entries({ ltr: "normal", rtl: "reverse", center: "center", edges: "edges", random: "random" })
   .map(([value, label]) => ({ value, label, icon: orderIcon(value) })));
@@ -83,7 +84,8 @@ const DEFAULTS = {
   smooth: 0,
   tracking: 0,
 };
-const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0, ink: 0.3 };
+const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0, ink: 0 };
+const GAP_INK = 0.4; // the gap lines switch turns them on at this width (stems)
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const asObj = (v) => (v && typeof v === "object" ? v : {});
 
@@ -346,6 +348,8 @@ function syncControls() {
   $("envelope").value =
     env == null ? "(preset)" : env === "none" ? "none" : (env.type ?? env);
   $("align").value = value("align");
+  const ob = effective().obstructions;
+  $("obstructions").value = !ob ? "none" : typeof ob === "string" ? ob : ob.type ?? "none";
   $("repel").value = value("repel") ? "on" : "off";
   $("knit").value = value("knit") ? "0.25" : "0";
   $("gaps").value = renderValue("ink") ? "on" : "off";
@@ -403,6 +407,9 @@ function fromControl(id) {
       if (v === "(preset)") delete overrides.envelope;
       else overrides.envelope = v === "none" ? "none" : { type: v };
       break;
+    case "obstructions":
+      set("obstructions", v === "none" ? undefined : { type: v });
+      break;
     case "align":
       set("align", v);
       break;
@@ -412,7 +419,7 @@ function fromControl(id) {
     case "knit":
       set("knit", Number(v));
       break;
-    // Gap lines: narrow gaps drawn as one line (the preset's ink), or left open (ink 0).
+    // Gap lines (off by default): narrow gaps drawn as one line, or left open (ink 0).
     case "shine":
     case "shade":
     case "depth":
@@ -425,7 +432,7 @@ function fromControl(id) {
       if (effectOpts("depth")) setEffectOpts("depth", { merge: v === "on" ? false : undefined });
       break;
     case "gaps":
-      setRender("ink", v === "on" ? (asObj(recipe.render).ink ?? RENDER_DEFAULTS.ink) : 0);
+      setRender("ink", v === "on" ? (asObj(recipe.render).ink || GAP_INK) : 0);
       break;
     case "order":
       setRender("order", v);
@@ -629,6 +636,7 @@ for (const id of [
   "preset",
   "envelope",
   "align",
+  "obstructions",
   "repel",
   "order",
   "knit",
