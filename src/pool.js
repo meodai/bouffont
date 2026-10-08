@@ -36,6 +36,16 @@ export function createPool({ size } = {}) {
   const workers = Array.from({ length: count }, spawn);
   idle.push(...workers);
 
+  // Priority jobs go ahead of the others but stay in order among themselves (a run of
+  // animation frames stays a run).
+  function enqueue(job, priority) {
+    job.priority = priority;
+    if (!priority) return queue.push(job);
+    const k = queue.findIndex((j) => !j.priority);
+    if (k === -1) queue.push(job);
+    else queue.splice(k, 0, job);
+  }
+
   function pump() {
     while (idle.length && queue.length) {
       const job = queue.shift();
@@ -64,8 +74,7 @@ export function createPool({ size } = {}) {
           ? new URL(options.font, globalThis.location.href).href // resolve against the page, not the worker
           : options.font;
         const job = { id: nextId++, options: { ...options, font }, signal, letters, resolve, reject };
-        if (priority) queue.unshift(job);
-        else queue.push(job);
+        enqueue(job, priority);
         pump();
       });
     },
@@ -77,8 +86,7 @@ export function createPool({ size } = {}) {
       return new Promise((resolve, reject) => {
         if (signal?.aborted) return reject(abortError());
         const job = { id: nextId++, frame, signal, resolve, reject };
-        if (priority) queue.unshift(job);
-        else queue.push(job);
+        enqueue(job, priority);
         pump();
       });
     },

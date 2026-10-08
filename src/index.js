@@ -155,7 +155,9 @@ export function drawFrame({ letters, render: look, knit, repel, effects: fx, ctx
   const ctx = { ...plain, rng: createRng(plain.seed) };
   let out = letters;
   if (knit) out = strategies.knit(out, ctx, { gap: knit });
-  if (repel) out = strategies.repel(out, ctx, repel === true ? {} : repel);
+  // A preview (repel hasn't run yet): the plain split, without the slower clean-up
+  // passes (slivers, seams) the real repel step does.
+  if (repel) out = strategies.repel(out, ctx, { ...(repel === true ? {} : repel), sliver: 0, seamWidth: 0 });
   return render(runEffects(out, fx, ctx), look, ctx);
 }
 

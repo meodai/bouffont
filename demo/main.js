@@ -571,7 +571,7 @@ function playLoop(now) {
       const i = tl.frames.length, run = tl.run;
       tl.frames.push(null);
       tl.waiting++;
-      pool.draw(tl.live.frame()).then(({ svg }) => {
+      pool.draw(tl.live.frame(), { priority: true }).then(({ svg }) => {
         if (run !== tl.run) return;
         tl.frames[i] = svg;
         tl.waiting--;

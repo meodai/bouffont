@@ -47,16 +47,19 @@ function fill(own, shapes, contested, delta, maxSteps) {
 function slivers(final, actual, cores, r) {
   if (!r) return final;
   const out = final.slice();
+  const boxes = actual.map((s) => (s.length ? bbox(s) : null));
+  const overlaps = (b, o) => o && o.minX <= b.maxX + r && o.maxX >= b.minX - r && o.minY <= b.maxY + r && o.maxY >= b.minY - r;
   for (let i = 0; i < out.length; i++) {
     if (!out[i].length) continue;
     const thin = difference(difference(out[i], open(out[i], r)), offset(cores[i], r * 0.5));
     for (const piece of patches(thin)) {
       const a = area(piece);
       if (a < (r * r) / 8) continue;
+      const pb = bbox(piece);
       const around = offset(piece, r);
       let best = -1, bestTouch = 0;
       for (let j = 0; j < out.length; j++) {
-        if (j === i || !out[j].length) continue;
+        if (j === i || !out[j].length || !overlaps(pb, boxes[j])) continue;
         // Only where the neighbour's own growth reached: no letter gains new ground.
         if (area(intersection(piece, actual[j])) < a * 0.6) continue;
         const touch = area(intersection(around, out[j]));
@@ -74,6 +77,7 @@ function slivers(final, actual, cores, r) {
 // Render keeps inner and gap lines out of it, so a line that runs out through a letter's
 // edge stops at a seam instead of crossing into the neighbour.
 function withSeams(letters, w) {
+  if (!w) return letters;
   const boxes = letters.map((l) => (l.shape.length ? bbox(l.shape) : null));
   return letters.map((l, i) => {
     if (!boxes[i]) return l;
