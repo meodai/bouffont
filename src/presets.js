@@ -122,6 +122,19 @@ export const presets = {
     render: { mode: 'stack', stroke: 0.15 },
   },
 
+  // Coral on the font's own outlines, letters spaced apart so each grows on its own, the
+  // middle ones on top, with a shine (best with a condensed font: Oswald).
+  lichen: {
+    structure: false,
+    lineHeight: 0.8,
+    tracking: 2,
+    overgrow: 0.7,
+    strategies: [['inflate', { amount: 0.2, smooth: 0 }], ['coral', {}]],
+    generations: ['coral', { steps: 90, reach: 1 }, { from: 'shape' }],
+    effects: [['shine', { angle: 215 }]],
+    render: { mode: 'stack', stroke: 0.15, ink: 0.4, order: 'center' },
+  },
+
   // Diffusion-limited aggregation: particles freeze onto the letters.
   frost: {
     structure: { ...pen, spacing: 0.2 },

@@ -128,7 +128,7 @@ letter meets across a gap (a notch, the opening of a G), and run out through the
 | `text`        |         | |
 | `font`        |         | opentype.js Font, see `loadFont` |
 | `seed`        | `1`     | number or string |
-| `preset`      |         | `throwup`, `bubbles`, `bubble`, `block`, `simple`, `crowd`, `candy`, `marquee`, and the slower simulations `coral`, `frost`; other options merge over it |
+| `preset`      |         | `throwup`, `bubbles`, `bubble`, `block`, `simple`, `crowd`, `candy`, `marquee`, and the slower simulations `coral`, `lichen`, `frost`; other options merge over it |
 | `size`        | `200`   | px |
 | `lineHeight`  | `1`     | text may contain newlines; lines are centred, baselines this × `size` apart |
 | `structure`   | on in presets | redraw letters from their centre lines with one pen, see above |
@@ -318,7 +318,8 @@ Effects inside the letters are drawn between the fill and the outline (with a ne
 inset, over it); `depth` is drawn before every letter, and the drawing grows to fit it.
 
 The fat band around the whole piece (as in `bubble` and `block`) is a render option,
-not an effect: `render: { outline: 0.6 }` (stems; `0` = none), for any preset.
+not an effect: `render: { outline: 0.6 }` (stems; `0` = none), for any preset. With
+`band: 'letter'` each letter gets its own band instead, stacked with it.
 
 Custom effects: `registerEffect(name, (letter, ctx, opts) => [{ part, shape }])`.
 

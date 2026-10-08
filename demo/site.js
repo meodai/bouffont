@@ -126,6 +126,7 @@ const ABOUT = {
   candy: 'Glossy and chubby: swollen, smoothed, packed tight, with depth, inline and shine.',
   marquee: 'An arched sign: knitted, pressed into seams, with an inline and a shine.',
   coral: 'Differential line growth: the outline wrinkles as it grows.',
+  lichen: 'Coral on the font’s own outlines, each letter growing on its own, with a shine.',
   frost: 'Diffusion-limited aggregation: particles freeze onto the letters.',
 };
 

@@ -11,6 +11,7 @@ const DEFAULTS = {
   order: 'ltr', // which letter is on top: 'ltr' | 'rtl' | 'center' | 'edges' | 'random'
   stroke: 0.14, // line thickness, in stems
   outline: 0, // outer outline band around the whole piece, in stems
+  band: 'piece', // 'letter': each letter gets its own band (stacked with it)
   invert: false,
   background: null,
   padding: 0.6, // in stems
@@ -198,7 +199,7 @@ export function render(letters, opts = {}, ctx) {
   // Effects behind every letter (extrusions): drawn first, so a side never covers the
   // front of the letter before it.
   const behindPaths = (list = []) => list.filter((e) => e.layer === 'behind').map(effectPath).join('');
-  const letterPaths = (shape, inner = null, fx = [], seams = null) => {
+  const letterPaths = (shape, inner = null, fx = [], seams = null, band = '') => {
     let gaps = thinGaps(shape, inkR);
     let body = shape, extra = '';
     let gapPolys = [];
@@ -251,7 +252,7 @@ export function render(letters, opts = {}, ctx) {
         `<path data-part="lines" clip-path="url(#${id})" d="${lines.map((l) => lineData(l, lines0, sw, step)).join('')}" ${lineStyle}/>`;
     }
     const d = pathData(body);
-    return `${underPaths(fx)}<path data-part="fill" d="${d}" ${fillStyle}/>${effectPaths(fx)}<path data-part="outline" d="${d}" ${outlineStyle}/>${topPaths(fx)}${extra}`;
+    return `${band}${underPaths(fx)}<path data-part="fill" d="${d}" ${fillStyle}/>${effectPaths(fx)}<path data-part="outline" d="${d}" ${outlineStyle}/>${topPaths(fx)}${extra}`;
   };
 
   let ordered = letters.filter((l) => l.shape.length);
@@ -276,12 +277,15 @@ export function render(letters, opts = {}, ctx) {
   const silhouette = behindShapes.length ? union(all, behindShapes) : all;
   let bounds = all;
 
+  // The band: the silhouette stroked as wide as the band (so it can be restyled like the
+  // letter outlines) and filled, so gaps between letters are ink too. Around the whole
+  // piece, or (band: 'letter') around each letter, drawn just behind it.
+  const reach = o.outline * ctx.stem + sw / 2;
+  const bandPath = (d) => `<path data-part="band" d="${d}" fill="${ink}" fill-rule="nonzero" stroke="${ink}" stroke-width="${round(reach * 2)}" stroke-linejoin="round"/>`;
+  const perLetterBand = o.outline && o.band === 'letter' && o.mode !== 'merge';
   if (o.outline) {
-    const reach = o.outline * ctx.stem + sw / 2;
     bounds = offset(silhouette, reach, { join: 'round' });
-    // The outer outline: the silhouette stroked as wide as the band (so it can be
-    // restyled like the letter outlines) and filled, so gaps between letters are ink too.
-    body.push(`<path data-part="band" d="${pathData(silhouette)}" fill="${ink}" fill-rule="nonzero" stroke="${ink}" stroke-width="${round(reach * 2)}" stroke-linejoin="round"/>`);
+    if (!perLetterBand) body.push(bandPath(pathData(silhouette)));
   }
 
   // All letters' extrusions as one block per kind: sides that meet merge, no crossings.
@@ -301,7 +305,7 @@ export function render(letters, opts = {}, ctx) {
     body.push(`<g data-part="letter" data-index="all">${letterPaths(all, ordered.flatMap(innerOf), ordered.flatMap((l) => l.effects ?? []))}</g>`);
   } else {
     for (const l of ordered) {
-      body.push(`<g data-part="letter" data-index="${l.index}" data-char="${escape(l.char)}">${letterPaths(l.shape, innerOf(l), l.effects, l.seams)}</g>`);
+      body.push(`<g data-part="letter" data-index="${l.index}" data-char="${escape(l.char)}">${letterPaths(l.shape, innerOf(l), l.effects, l.seams, perLetterBand ? bandPath(pathData(l.shape)) : '')}</g>`);
     }
   }
 

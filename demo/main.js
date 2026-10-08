@@ -88,7 +88,7 @@ const DEFAULTS = {
   smooth: 0,
   tracking: 0,
 };
-const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0, ink: 0, inner: 0.5, outline: 0 };
+const RENDER_DEFAULTS = { order: "ltr", curves: 0, fair: 0, ink: 0, inner: 0.5, outline: 0, band: "piece" };
 const GAP_INK = 0.4; // the gap lines switch turns them on at this width (stems)
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const asObj = (v) => (v && typeof v === "object" ? v : {});
@@ -360,6 +360,8 @@ function syncControls() {
   $("gaps").value = renderValue("ink") ? "on" : "off";
   $("inner").value = renderValue("inner") ? "on" : "off";
   $("band").value = renderValue("outline") ? "on" : "off";
+  $("bandEach").value = renderValue("band") === "letter" ? "on" : "off";
+  $("bandEach").disabled = !renderValue("outline");
   for (const n of EFFECTS) $(n).value = effectOpts(n) ? "on" : "off";
   $("perLetter").value = effectOpts("depth")?.merge === false ? "on" : "off";
   $("perLetter").disabled = !effectOpts("depth");
@@ -447,6 +449,11 @@ function fromControl(id) {
     // width or 0.6 stems.
     case "band":
       setRender("outline", v === "on" ? (asObj(recipe.render).outline || 0.6) : 0);
+      syncControls(); // "per letter" needs a band
+      break;
+    // Band per letter: each letter its own band instead of one around the whole piece.
+    case "bandEach":
+      setRender("band", v === "on" ? "letter" : "piece");
       break;
     case "gaps":
       setRender("ink", v === "on" ? (asObj(recipe.render).ink || GAP_INK) : 0);
@@ -662,6 +669,7 @@ for (const id of [
   ...EFFECTS,
   "perLetter",
   "band",
+  "bandEach",
   "gaps",
   "inner",
   "structure",
