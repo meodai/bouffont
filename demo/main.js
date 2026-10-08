@@ -2,6 +2,7 @@ import { bouffontLive, loadFont, presets, envelopes, obstructions, geom } from "
 import { pool } from "./pool.js";
 import iosevkaUrl from "./fonts/iosevka-400-normal.woff?url";
 import { highlightCode } from "./highlight.js";
+import { dial } from "./dial.js";
 import { alignIcon, envelopeIcon, obstructionIcon, orderIcon, repeatIcon, richOptions } from "./icons.js";
 
 const files = {
@@ -47,6 +48,9 @@ $("align").innerHTML = richOptions(["middle", "bottom", "top", "both"].map((valu
 $("order").innerHTML = richOptions(Object.entries({ ltr: "normal", rtl: "reverse", center: "center", edges: "edges", random: "random" })
   .map(([value, label]) => ({ value, label, icon: orderIcon(value) })));
 $("playMode").innerHTML = richOptions(["zigzag", "loop"].map((value) => ({ value, icon: repeatIcon(value) })));
+// The light as a dial (it drives the hidden #light slider).
+const lightDial = dial($("light"));
+
 // Each font's own face, for its option (loaded when the page is idle).
 (window.requestIdleCallback ?? setTimeout)(() => {
   for (const [name, { url }] of Object.entries(fonts)) {
@@ -312,6 +316,7 @@ const sliders = {
     get: () => lightAngle(),
     set: (v) => setLight(v),
     fmt: 0,
+    pad: 3, // 045, 225: the number keeps its width
   },
   smooth: {
     get: () =>
@@ -336,7 +341,7 @@ const sliders = {
 const showSlider = (id) => {
   const s = sliders[id],
     v = Number($(id).value);
-  $(`${id}Out`).textContent = !v && s.off ? s.off : v.toFixed(s.fmt);
+  $(`${id}Out`).textContent = !v && s.off ? s.off : v.toFixed(s.fmt).padStart(s.pad ?? 0, "0");
 };
 
 function syncControls() {
@@ -357,6 +362,7 @@ function syncControls() {
   $("perLetter").value = effectOpts("depth")?.merge === false ? "on" : "off";
   $("perLetter").disabled = !effectOpts("depth");
   $("light").disabled = !LIT.some(effectOpts);
+  lightDial?.sync();
   $("fxInset").disabled = !INSET.some(effectOpts);
   $("order").value = renderValue("order");
   $("structure").value = skeletonOn() ? "on" : "off";

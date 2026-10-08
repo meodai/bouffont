@@ -925,3 +925,78 @@ figcaption {
 :is(#stage, [data-puff], .preset-name) [data-part="obstructions"] {
   display: none;
 }
+
+/* Effects: switches and inset on the left, the light as a dial on the right. */
+.fx-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+.fx-controls {
+  min-width: 0;
+}
+/* A row across both columns (inset). */
+.fx-row {
+  grid-column: 1 / -1;
+}
+.fx-light {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.8rem 0.3rem 0;
+  color: var(--mute);
+}
+.fx-light output {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+/* The dial: a ring with a diamond knob on it, where the light comes from. */
+.dial {
+  --size: 4.4em;
+  --line: 2px;
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  box-sizing: border-box;
+  border: var(--line) solid var(--ink);
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+}
+.dial:active {
+  cursor: grabbing;
+}
+.dial::after {
+  /* the centre: where the light goes */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.3em;
+  height: 0.3em;
+  margin: -0.15em 0 0 -0.15em;
+  background: var(--ink);
+  border-radius: 50%;
+}
+.dial-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  width: 0.8em;
+  height: 0.8em;
+  margin: -0.4em 0 0 -0.4em;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  /* out from the centre along the angle, onto the ring's line, then turned into a diamond */
+  transform: rotate(var(--a, 225deg)) translateX(calc(var(--size) / 2 - var(--line) / 2)) rotate(calc(45deg - var(--a, 225deg)));
+}
+.dial:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.dial[aria-disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
