@@ -49,7 +49,7 @@ fill($("envelope"), ["(preset)", "none", ...Object.keys(envelopes)]);
 let fontName = fonts.Merriweather ? "Merriweather" : Object.keys(fonts)[0];
 let presetName = Object.keys(presets)[0];
 let recipe = structuredClone(presets[presetName]);
-let overrides = { text: "salle petit\nbouffont", seed: "puff" };
+let overrides = { text: "sale petit\nbouffont", seed: "puff" };
 const NESTED = ["render", "structure"];
 
 // Library defaults for options a recipe may leave out.
