@@ -317,6 +317,9 @@ effects: [['shade', { inset: 0.16 }], ['inline', { inset: 0.5 }], ['shine', { in
 Effects inside the letters are drawn between the fill and the outline (with a negative
 inset, over it); `depth` is drawn before every letter, and the drawing grows to fit it.
 
+The fat band around the whole piece (as in `bubble` and `block`) is a render option,
+not an effect: `render: { outline: 0.6 }` (stems; `0` = none), for any preset.
+
 Custom effects: `registerEffect(name, (letter, ctx, opts) => [{ part, shape }])`.
 
 ### Render
