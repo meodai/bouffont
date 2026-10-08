@@ -1046,9 +1046,9 @@ figcaption {
   }
 }
 
-/* The shine in the titles: the page colour turned 100° around the hue circle, no outline. */
+/* The shine in the titles: the pink highlight the page colour is made from, no outline. */
 :is([data-puff], .preset-name) [data-part="shine"] {
-  fill: oklch(from var(--bg) l c calc(h + 100));
+  fill: var(--highlight);
   stroke: none;
 }
 

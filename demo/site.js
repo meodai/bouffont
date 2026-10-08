@@ -38,6 +38,17 @@ function place(el, text, markup) {
 // each with its own text. New settings cancel the titles that haven't started yet.
 let titleOptions = { preset: 'throwup' }, titleFont = merriweatherUrl, titleRun, titleTimer;
 
+// The titles' effects sit further inside the edge than in the playground (+0.2 stems).
+const INSET = { shine: 0.26, shade: 0.16, inline: 0.3 }; // the library's defaults
+function forTitles(options) {
+  if (!options.effects?.length) return options;
+  const effects = options.effects.map((e) => {
+    const [name, opts = {}] = Array.isArray(e) ? e : [e, {}];
+    return name in INSET ? [name, { ...opts, inset: (opts.inset ?? INSET[name]) + 0.2 }] : e;
+  });
+  return { ...options, effects };
+}
+
 function titles() {
   titleRun?.abort();
   const run = (titleRun = new AbortController());
@@ -45,7 +56,7 @@ function titles() {
     const text = (el.dataset.text ??= el.textContent.trim());
     if (!el.querySelector('svg')) el.classList.add('pending');
     try {
-      const markup = await grow({ ...titleOptions, text, font: titleFont }, { signal: run.signal });
+      const markup = await grow({ ...forTitles(titleOptions), text, font: titleFont }, { signal: run.signal });
       if (!run.signal.aborted) place(el, text, markup);
     } catch {
       // aborted by newer settings, or half-typed options in the playground code
@@ -67,7 +78,7 @@ async function favicon() {
   const run = ++faviconRun;
   let markup;
   try {
-    markup = await grow({ ...titleOptions, text: 'ff', font: titleFont });
+    markup = await grow({ ...forTitles(titleOptions), text: 'ff', font: titleFont });
   } catch {
     return;
   }
@@ -157,7 +168,8 @@ function samples() {
 // Every part is yours: per-letter fills ink up in a wave; hovering pins a letter.
 async function parts() {
   const el = document.querySelector('[data-parts]');
-  const piece = await pool.render({ text: 'bouffont', font: iosevkaUrl, seed: 'puff', preset: 'bubbles', effects: [['inline', {}], ['shine', {}]] });
+  // Letters pressed into each other, so it reads as one word.
+  const piece = await pool.render({ text: 'bouffont', font: iosevkaUrl, seed: 'puff', preset: 'bubbles', tracking: -0.6, effects: [['inline', {}], ['shine', {}]] });
   const { svg, letters } = piece.dom();
   svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
   svg.setAttribute('role', 'img');
