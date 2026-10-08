@@ -253,6 +253,13 @@ function toggles() {
   sync();
 }
 
+async function effectExamples() {
+  const el = document.querySelector('[data-effects]');
+  const list = ['shine', 'shade', 'depth', 'inline'];
+  const pieces = await Promise.all(list.map((e) => grow({ text: 'fx', font: iosevkaUrl, preset: 'throwup', effects: [[e, {}]] })));
+  el.append(...pieces.map((markup, i) => figure(markup, list[i])));
+}
+
 async function generations() {
   const el = document.querySelector('[data-generations]');
   const steps = [0, 0.5, 1];
@@ -279,7 +286,7 @@ presetList();
 toggles();
 const titlesDone = titles();
 favicon();
-const rest = Promise.all([samples(), parts(), fonts(), generations()]);
+const rest = Promise.all([samples(), parts(), fonts(), generations(), effectExamples()]);
 await titlesDone;
 // Only now does the page have its real height.
 addEventListener('scroll', showSettings, { passive: true });

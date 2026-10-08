@@ -57,6 +57,14 @@
     </p>
     <div class="sbs" data-generations></div>
 
+    <h2 data-puff>Effects</h2>
+    <p data-toggles>
+      Effects draw on the finished letters without changing them: a <span class="toggle" tabindex="0" role="switch" data-control="shine" data-on="on" data-off="off">shine</span> where
+      the light hits, a <span class="toggle" tabindex="0" role="switch" data-control="shade" data-on="on" data-off="off">shade</span> on the far side, <span class="toggle" tabindex="0" role="switch" data-control="depth" data-on="on" data-off="off">depth</span> behind them,
+      an <span class="toggle" tabindex="0" role="switch" data-control="inline" data-on="on" data-off="off">inline</span> along every edge.
+    </p>
+    <div class="sbs" data-effects></div>
+
     <h2 data-puff>Use it</h2>
     <pre class="code"><code>npm install bouffont</code></pre>
     <pre class="code"><code>import { bouffont, loadFont } from 'bouffont';
@@ -84,8 +92,7 @@ document.body.innerHTML = piece.svg; // piece.letters holds the geometry</code><
     <p>
       <code>piece.dom()</code> hands back the SVG element and a reference to every
       fill, outline and inner line, for the whole piece and for each letter. Style
-      them, animate them, react to them. Below, each letter's fill inks up in turn;
-      hover a letter to keep it inked.
+      them, animate them, react to them.
     </p>
     <figure class="parts" data-parts></figure>
     <pre class="code"><code>const { svg, letters } = piece.dom();

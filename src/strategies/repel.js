@@ -41,6 +41,50 @@ function fill(own, shapes, contested, delta, maxSteps) {
 // covering those) that is cut back out at the end, leaving a hole that a neighbour
 // really covers. Give such holes back to that neighbour, unless they are as narrow
 // as a slit: those stay open, so no letter pokes a sliver into another one.
+// Strips thinner than `r` that run along a neighbour (where seams meet) go to that
+// neighbour, if its own growth covered them anyway: drawn as outlines, they would read
+// as one letter's line bleeding into the other. A letter's own drawing is never moved.
+function slivers(final, actual, cores, r) {
+  if (!r) return final;
+  const out = final.slice();
+  for (let i = 0; i < out.length; i++) {
+    if (!out[i].length) continue;
+    const thin = difference(difference(out[i], open(out[i], r)), offset(cores[i], r * 0.5));
+    for (const piece of patches(thin)) {
+      const a = area(piece);
+      if (a < (r * r) / 8) continue;
+      const around = offset(piece, r);
+      let best = -1, bestTouch = 0;
+      for (let j = 0; j < out.length; j++) {
+        if (j === i || !out[j].length) continue;
+        // Only where the neighbour's own growth reached: no letter gains new ground.
+        if (area(intersection(piece, actual[j])) < a * 0.6) continue;
+        const touch = area(intersection(around, out[j]));
+        if (touch > bestTouch) { best = j; bestTouch = touch; }
+      }
+      if (best < 0) continue;
+      out[i] = difference(out[i], piece);
+      out[best] = union(out[best], intersection(piece, actual[best]));
+    }
+  }
+  return out;
+}
+
+// Each letter's seams: the strip of it, `w` wide, along where it touches another letter.
+// Render keeps inner and gap lines out of it, so a line that runs out through a letter's
+// edge stops at a seam instead of crossing into the neighbour.
+function withSeams(letters, w) {
+  const boxes = letters.map((l) => (l.shape.length ? bbox(l.shape) : null));
+  return letters.map((l, i) => {
+    if (!boxes[i]) return l;
+    const b = boxes[i];
+    const near = letters.filter((o, j) => j !== i && boxes[j] && boxes[j].minX <= b.maxX + w && boxes[j].maxX >= b.minX - w && boxes[j].minY <= b.maxY + w && boxes[j].maxY >= b.minY - w);
+    if (!near.length) return l;
+    const seams = intersection(offset(union(...near.map((o) => o.shape)), w), l.shape);
+    return seams.length ? { ...l, seams } : l;
+  });
+}
+
 function refill(final, actual, contested, r) {
   const ink = intersection(union(...actual), contested);
   const holes = open(difference(ink, union(...final)), r);
@@ -184,7 +228,7 @@ function patches(shape) {
   return outers.map((r) => intersection(shape, [r])).filter((p) => p.length);
 }
 
-export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, slit = 0.3, method = 'grid', cell = 0.08 } = {}) {
+export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, slit = 0.3, method = 'grid', cell = 0.08, sliver = 0.35, seamWidth = 0.3 } = {}) {
   if (letters.length < 2) return letters;
   const actual = letters.map((l) => l.shape);
   const shapes = actual.map((s) => filled(s, slit * ctx.stem));
@@ -212,8 +256,9 @@ export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, sl
   });
   if (method === 'grid') {
     own = splitOnGrid(own, shapes, contested, cell * ctx.stem);
-    return refill(letters.map((l, i) => intersection(own[i], actual[i])), actual, contested, slit * ctx.stem)
-      .map((shape, i) => ({ ...letters[i], shape }));
+    const split = refill(letters.map((l, i) => intersection(own[i], actual[i])), actual, contested, slit * ctx.stem);
+    const done = slivers(split, actual, letters.map((l) => l.core ?? []), sliver * ctx.stem);
+    return withSeams(letters.map((l, i) => ({ ...l, shape: done[i] })), seamWidth * ctx.stem);
   }
   own = fill(own, shapes, contested, delta, maxSteps);
 
@@ -232,5 +277,5 @@ export function repel(letters, ctx, { step = 0.1, seam = 0.35, maxSteps = 40, sl
     own = fill(own, shapes, contested, delta / 2, 6);
   }
   // Cut each letter's own counters and slits back out of its territory.
-  return letters.map((l, i) => ({ ...l, shape: intersection(own[i], actual[i]) }));
+  return withSeams(letters.map((l, i) => ({ ...l, shape: intersection(own[i], actual[i]) })), seamWidth * ctx.stem);
 }

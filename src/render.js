@@ -198,7 +198,7 @@ export function render(letters, opts = {}, ctx) {
   // Effects behind every letter (extrusions): drawn first, so a side never covers the
   // front of the letter before it.
   const behindPaths = (list = []) => list.filter((e) => e.layer === 'behind').map(effectPath).join('');
-  const letterPaths = (shape, inner = null, fx = []) => {
+  const letterPaths = (shape, inner = null, fx = [], seams = null) => {
     let gaps = thinGaps(shape, inkR);
     let body = shape, extra = '';
     let gapPolys = [];
@@ -243,9 +243,11 @@ export function render(letters, opts = {}, ctx) {
     const innerPolys = (inner ?? []).filter((pts) => pts.length > 1 && keepLine(dense(pts))).map((pts) => ({ pts, closed: false }));
     const lines = [...gapPolys, ...innerPolys];
     if (lines.length) {
-      // Clip to the letter so lines meet its outline exactly.
+      // Clip to the letter so lines meet its outline exactly, and stop short of its seams
+      // with other letters (repel), so no line crosses into a neighbour.
       const id = `${uid}-${++clipId}`;
-      extra += `<clipPath id="${id}"><path d="${pathData(body)}"/></clipPath>` +
+      const clip = seams?.length ? difference(body, seams) : body;
+      extra += `<clipPath id="${id}"><path d="${pathData(clip)}"/></clipPath>` +
         `<path data-part="lines" clip-path="url(#${id})" d="${lines.map((l) => lineData(l, lines0, sw, step)).join('')}" ${lineStyle}/>`;
     }
     const d = pathData(body);
@@ -299,7 +301,7 @@ export function render(letters, opts = {}, ctx) {
     body.push(`<g data-part="letter" data-index="all">${letterPaths(all, ordered.flatMap(innerOf), ordered.flatMap((l) => l.effects ?? []))}</g>`);
   } else {
     for (const l of ordered) {
-      body.push(`<g data-part="letter" data-index="${l.index}" data-char="${escape(l.char)}">${letterPaths(l.shape, innerOf(l), l.effects)}</g>`);
+      body.push(`<g data-part="letter" data-index="${l.index}" data-char="${escape(l.char)}">${letterPaths(l.shape, innerOf(l), l.effects, l.seams)}</g>`);
     }
   }
 
